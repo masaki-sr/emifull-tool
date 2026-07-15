@@ -6811,7 +6811,7 @@
     document.getElementById('aem-source').value = source;
     document.getElementById('aem-client').value = t.client || '';
     document.getElementById('aem-title').value  = t.text   || '';
-    document.getElementById('aem-assignee').value = t.assignee || '';
+    document.getElementById('aem-assignee').value = ASSIGNEE_NORMALIZE[t.assignee] || t.assignee || '';
     document.getElementById('aem-work-start').value   = t.workStart   || '';
     document.getElementById('aem-work-end').value     = t.workEnd     || '';
     document.getElementById('aem-work-minutes').value = t.workMinutes || '';
