@@ -8248,7 +8248,10 @@
         try {
           var myId = localStorage.getItem('myMemberId') || 'hamada';
           var toEl = document.getElementById('msg-to');
-          if (toEl) toEl.value = (myId === 'hamada' ? '笠田' : '佐藤');
+          if (toEl) {
+            var other = MEMBER_LIST.filter(function(m) { return m.id !== myId; })[0];
+            toEl.value = other ? other.name : '佐藤';
+          }
         } catch(e) {}
         // ② 初期表示が済んだら、残りを順番に遅延読み込み
         runDeferredInitLoads();
