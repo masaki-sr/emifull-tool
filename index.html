@@ -748,6 +748,7 @@
     .wa-status-part{background:#fffde7;color:#8a6a00;}
     .wa-status-off {background:#f0f0f0;color:#666;}
     .wa-status-tbd {background:#f3e8f9;color:#7b4fa0;}
+    .wa-status-out {background:#e3f0fc;color:#1a5b9c;}
     .wa-calendar{width:100%;}
     .wa-cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;}
     .wa-cal-header-cell{text-align:center;font-size:0.78rem;font-weight:700;color:var(--text-sub);padding:4px 0;}
@@ -769,6 +770,7 @@
     .wa-cal-cell.status-off         {background:#f5f5f5;}
     .wa-cal-cell.status-off-weekday {background:#fde8ee;}
     .wa-cal-cell.status-tbd         {background:#f8f0fc;}
+    .wa-cal-cell.status-out         {background:#eaf4fd;}
     .wa-status-ok-memo     {background:#fff3cd;color:#7a6000;}
     .wa-status-off-weekday {background:#fde8ee;color:#b02040;}
     /* 凡例 */
@@ -779,6 +781,7 @@
     .wa-legend-dot.lg-ok-memo     {background:#fffde7;border:1px solid #e8c840;}
     .wa-legend-dot.lg-off-weekday {background:#fde8ee;border:1px solid #f0a8b8;}
     .wa-legend-dot.lg-off         {background:#f5f5f5;border:1px solid #ddd;}
+    .wa-legend-dot.lg-out         {background:#eaf4fd;border:1px solid #a8c8ee;}
     /* 勤務予定保存トースト通知 */
     #wa-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;padding:10px 24px;border-radius:24px;font-size:0.9rem;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.15);pointer-events:none;opacity:0;transition:opacity 0.3s;}
     #wa-toast.wa-toast-ok {background:#e8faf3;color:#1b7a5a;border:1px solid #52c78a;}
@@ -2265,6 +2268,7 @@
             <span class="wa-legend-item"><span class="wa-legend-dot lg-ok-memo"></span>備考あり</span>
             <span class="wa-legend-item"><span class="wa-legend-dot lg-off-weekday"></span>平日休み</span>
             <span class="wa-legend-item"><span class="wa-legend-dot lg-off"></span>休み</span>
+            <span class="wa-legend-item"><span class="wa-legend-dot lg-out"></span>外勤</span>
           </div>
           <div class="wa-cal-header">
             <div class="wa-cal-header-cell sun">日</div>
@@ -8279,6 +8283,7 @@
     '勤務可': { cls:'wa-status-ok',   calCls:'status-ok',   label:'勤務可' },
     '一部可': { cls:'wa-status-part', calCls:'status-part', label:'一部可' },
     '休み':   { cls:'wa-status-off',  calCls:'status-off',  label:'休み'   },
+    '外勤':   { cls:'wa-status-out',  calCls:'status-out',  label:'外勤'   },
     '未定':   { cls:'wa-status-tbd',  calCls:'status-tbd',  label:'未定'   }
   };
 
@@ -8430,11 +8435,11 @@
           curEnd    = '';
         } else {
           curStatus = '勤務可';
-          curStart  = '09:30';
-          curEnd    = '14:30';
+          curStart  = '10:00';
+          curEnd    = '17:00';
         }
       }
-      var statusOptions = ['', '勤務可', '一部可', '休み', '未定'].map(function(s) {
+      var statusOptions = ['', '勤務可', '一部可', '休み', '外勤', '未定'].map(function(s) {
         return '<option value="' + s + '"' + (s === curStatus ? ' selected' : '') + '>' + (s || '未設定') + '</option>';
       }).join('');
       html += '<tr' + (dateStr === today ? ' style="background:#f0f9f3;"' : '') + '>' +
