@@ -4386,7 +4386,7 @@
 
   // クライアントをスプレッドシートに新規登録
   var CLIENT_STATUS_CODE_TO_JP = { 'prospect': '見込み', 'active': '契約中', 'terminated': '契約終了' };
-  function saveClientToSheet(clientData) {
+  function saveClientToSheet(clientData, clientId) {
     var statusJp = CLIENT_STATUS_CODE_TO_JP[clientData.status] || clientData.status || '契約中';
     var postData = {
       sheet: 'クライアント',
@@ -4404,6 +4404,12 @@
       'ストレスチェック月': clientData.stressCheckMonth || '',
       'メモ':             clientData.memo || ''
     };
+    // クライアントIDが指定されている場合は「新規追加」ではなく「既存行の更新」にする
+    if (clientId) {
+      postData.action     = 'updateRow';
+      postData.updateKey  = 'client_id';
+      postData['client_id'] = clientId;
+    }
     return fetch(GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -4702,10 +4708,23 @@
 
   function deleteClient(id) {
     if (!confirm('このクライアントを完全に削除しますか？\nこの操作は取り消せません。\n\n通常は「契約終了」への変更をお勧めします。')) return;
-    var remaining = loadClients().filter(function(c) { return c.id !== id; });
-    clientsCache = remaining;
-    saveClients(remaining);
-    renderClients();
+    fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ sheet: 'クライアント', action: 'deleteRow', deleteKey: 'client_id', 'client_id': id })
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (result && result.error) throw new Error(result.error);
+        return fetchClientsFromSheet();
+      })
+      .then(function() {
+        renderClients();
+        updateClientStat();
+      })
+      .catch(function(e) {
+        alert('クライアントの削除に失敗しました: ' + e.message);
+      });
   }
 
   // クライアントIDからクライアントを検索するヘルパー
@@ -4786,18 +4805,23 @@
       memo:             document.getElementById('client-form-memo').value.trim()
     };
     if (idVal) {
-      // 編集（localStorageのみ更新 — 編集のスプレッドシート対応は次段階）
+      // 編集 → スプレッドシートの既存行を更新
       var editId = parseInt(idVal, 10);
-      clients = clients.map(function(c) {
-        if (c.id !== editId) return c;
-        return Object.assign({}, c, newData);
-      });
-      clientsCache = clients;
-      saveClients(clients);
-      closeClientModal();
-      closeClientDetail();
-      renderClients();
-      addActivity('client', 'クライアント「' + name + '」の情報を更新');
+      saveClientToSheet(newData, editId)
+        .then(function() {
+          addActivity('client', 'クライアント「' + name + '」の情報を更新');
+          closeClientModal();
+          closeClientDetail();
+          // スプレッドシートから再取得して画面更新
+          return fetchClientsFromSheet();
+        })
+        .then(function() {
+          renderClients();
+          updateClientStat();
+        })
+        .catch(function(e) {
+          alert('クライアント情報の更新に失敗しました: ' + e.message);
+        });
     } else {
       // 新規登録 → スプレッドシートに保存
       saveClientToSheet(newData)
