@@ -1,7 +1,7 @@
 // Vercel Edge Runtime（タイムアウト30秒、Hobbyプランでも有効）
 export const config = { runtime: 'edge' };
 
-const GAS_BASE = 'https://script.google.com/macros/s/AKfycbzbfJLKF_3KTTiLjOoDmLpBXQ350igSEa2N64ok-Cbk0yRULh7VIfuID7IePhtRaoYRkw/exec';
+const GAS_BASE = 'https://script.google.com/macros/s/AKfycbzm3eLCAQxUdZE8vpW7N2mOL3IiNT0c_KLzDs8YIBjU446SWocEoQ1SxUZVjtYV0JG5Rw/exec';
 
 /**
  * GASへのfetch（リダイレクトを手動追跡）
