@@ -8554,6 +8554,7 @@
           if (msgEl) msgEl.textContent = '';
           showWaToast('保存しました', false);
           loadWorkAvailability(staffId, window._waInputMonth).then(function() { renderTodayWorkAvail(); });
+          loadAndRenderWaCalendar();
         } else {
           if (msgEl) msgEl.textContent = '';
           showWaToast('保存に失敗しました: ' + (res.error || ''), true);
