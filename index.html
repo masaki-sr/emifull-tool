@@ -6880,13 +6880,30 @@
       .then(function(result) {
         if (!result || result.success !== true) throw new Error((result && result.error) || '不明なエラー');
         closeArchiveEditModal();
+
+        // 再取得はせず、保存した内容をそのままキャッシュへ反映して即座に画面を更新する
+        var cache = source === 'payroll' ? payrollRecordsCache : recordsCache;
+        cache.forEach(function(r) {
+          if (String(r.id) !== String(id)) return;
+          r.client      = postData['クライアント'];
+          r.text        = postData['タスク内容'];
+          r.assignee    = postData['担当者'];
+          r.workStart   = postData['開始時刻'];
+          r.workEnd     = postData['終了時刻'];
+          r.workMinutes = postData['作業時間'];
+          if (source === 'payroll') {
+            r.memo = postData['メモ'];
+          } else {
+            r.category = postData['業務種別'];
+            r.due      = postData['期限'];
+          }
+        });
+
         if (source === 'payroll') {
-          return fetchPayrollRecordsFromSheet().then(function() { renderPayrollRecord(); });
+          renderPayrollRecord();
         } else {
-          return fetchRecordsFromSheet().then(function() { renderDoneList(); });
+          renderDoneList();
         }
-      })
-      .then(function() {
         try { renderTimeSummary(); } catch (e) {}
       })
       .catch(function(e) {
