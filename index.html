@@ -920,6 +920,7 @@
             <button id="filter-btn-all"      onclick="setFilter('')"           class="btn btn-primary"   style="padding:4px 12px;font-size:0.78rem;">すべて</button>
             <button id="filter-btn-hamada"   onclick="setFilter('hamada')"   class="btn btn-secondary" style="padding:4px 12px;font-size:0.78rem;display:inline-flex;align-items:center;gap:4px;">佐藤<span id="member-status-hamada" style="font-size:0.88rem;line-height:1;" title="在席">🟢</span></button>
             <button id="filter-btn-takasaki" onclick="setFilter('takasaki')" class="btn btn-secondary" style="padding:4px 12px;font-size:0.78rem;display:inline-flex;align-items:center;gap:4px;">笠田<span id="member-status-takasaki" style="font-size:0.88rem;line-height:1;" title="在席">🟢</span></button>
+            <button id="filter-btn-kaikawa" onclick="setFilter('kaikawa')" class="btn btn-secondary" style="padding:4px 12px;font-size:0.78rem;display:inline-flex;align-items:center;gap:4px;">貝川<span id="member-status-kaikawa" style="font-size:0.88rem;line-height:1;" title="在席">🟢</span></button>
             <select id="my-status-select" onchange="onMyStatusChange(this.value)" style="font-size:0.76rem;padding:3px 6px;border:1px solid #ccc;border-radius:4px;margin-left:6px;">
               <option value="normal">🟢 在席</option>
               <option value="phone">☎️ 電話</option>
@@ -946,6 +947,7 @@
             <option value="">担当者</option>
             <option value="hamada">佐藤</option>
             <option value="takasaki">笠田</option>
+            <option value="kaikawa">貝川</option>
           </select>
           <select id="new-task-status" class="form-select"
             style="width:82px;padding:8px 4px;font-size:0.80rem;flex-shrink:0;">
@@ -992,6 +994,7 @@
               <select id="msg-to" style="font-size:0.72rem;padding:2px 3px;border:1px solid #ccc;border-radius:4px;flex-shrink:0;">
                 <option value="佐藤">→佐藤</option>
                 <option value="笠田">→笠田</option>
+                <option value="貝川">→貝川</option>
               </select>
               <input id="msg-text" type="text" class="form-input" placeholder="メッセージを入力…"
                 style="flex:1;padding:3px 5px;font-size:0.74rem;" onkeydown="if(event.key==='Enter')sendQuickMsg()" />
@@ -1183,6 +1186,7 @@
             <option value="">—</option>
             <option value="hamada">佐藤</option>
             <option value="takasaki">笠田</option>
+            <option value="kaikawa">貝川</option>
           </select>
         </div>
         <div class="form-group">
@@ -1270,6 +1274,7 @@
             <option value="">すべて</option>
             <option value="hamada">佐藤</option>
             <option value="takasaki">笠田</option>
+            <option value="kaikawa">貝川</option>
           </select>
         </div>
         <div>
@@ -1328,6 +1333,7 @@
               <option value="">すべて</option>
               <option value="hamada">佐藤</option>
               <option value="takasaki">笠田</option>
+              <option value="kaikawa">貝川</option>
             </select>
           </div>
           <div>
@@ -1628,6 +1634,7 @@
             <option value="">未設定</option>
             <option value="hamada">佐藤</option>
             <option value="takasaki">笠田</option>
+            <option value="kaikawa">貝川</option>
           </select>
         </div>
         <div class="form-group">
@@ -1722,6 +1729,7 @@
             <option value="">—</option>
             <option value="hamada">佐藤</option>
             <option value="takasaki">笠田</option>
+            <option value="kaikawa">貝川</option>
           </select>
         </div>
         <div class="form-group">
@@ -1883,6 +1891,7 @@
               <option value="">未設定</option>
               <option value="hamada">佐藤</option>
               <option value="takasaki">笠田</option>
+              <option value="kaikawa">貝川</option>
             </select>
           </div>
           <div class="form-group">
@@ -2205,6 +2214,13 @@
       <p>勤務できそうな時間を入力・共有できます</p>
     </div>
     <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <label for="wa-staff-select" style="font-size:0.88rem;color:var(--text-sub);">担当者：</label>
+        <select id="wa-staff-select" onchange="switchWaStaff(this.value)" style="font-size:0.9rem;padding:5px 10px;border:1px solid #ccc;border-radius:4px;">
+          <option value="takasaki">笠田</option>
+          <option value="kaikawa">貝川</option>
+        </select>
+      </div>
       <div class="wa-tab-bar">
         <button class="wa-tab active" onclick="switchWorkAvailTab('input', this)">📝 勤務予定入力</button>
         <button class="wa-tab" onclick="switchWorkAvailTab('calendar', this)">📅 カレンダーで確認</button>
@@ -2637,21 +2653,23 @@
   var PRIORITY_TO_STATUS = { urgent: 'inprogress', caution: 'waiting', normal: 'todo', done: 'done' };
   var ASSIGNEES = [
     { value: 'hamada',   label: '佐藤' },
-    { value: 'takasaki', label: '笠田' }
+    { value: 'takasaki', label: '笠田' },
+    { value: 'kaikawa',  label: '貝川' }
   ];
   // 表示名への変換マップ（レガシーデータの日本語表記にも対応）
   var ASSIGNEE_LABEL = {
     'hamada':   '佐藤',
     'takasaki': '笠田',
+    'kaikawa':  '貝川',
     '佐藤':     '佐藤',
     '笠田':     '笠田',
-    '笠田':     '笠田'
+    '貝川':     '貝川'
   };
   // 日本語保存値 → 正規ID への変換（loadTasks でマイグレーション）
   var ASSIGNEE_NORMALIZE = {
     '佐藤': 'hamada',
     '笠田': 'takasaki',
-    '笠田': 'takasaki'
+    '貝川': 'kaikawa'
   };
   // --- 担当者状態表示 ---
   var MEMBER_STATUS_MASTER = {
@@ -2666,7 +2684,8 @@
   // 担当者IDと表示名のリスト（フィルタボタン用）
   var MEMBER_LIST = [
     { id: 'hamada', name: '佐藤' },
-    { id: 'takasaki', name: '笠田' }
+    { id: 'takasaki', name: '笠田' },
+    { id: 'kaikawa', name: '貝川' }
   ];
 
   var TASK_TYPES = [
@@ -3008,7 +3027,7 @@
 
   // フィルターボタンの見た目を更新
   function updateFilterButtons() {
-    var ids = { '': 'all', 'hamada': 'hamada', 'takasaki': 'takasaki' };
+    var ids = { '': 'all', 'hamada': 'hamada', 'takasaki': 'takasaki', 'kaikawa': 'kaikawa' };
     Object.keys(ids).forEach(function(key) {
       var btn = document.getElementById('filter-btn-' + ids[key]);
       if (!btn) return;
@@ -3257,7 +3276,7 @@
         ? '<div style="font-size:0.75rem;color:#6a8a6e;margin-top:2px;">担当：' + esc(assigneeLabel) + '</div>'
         : '';
 
-      var assigneeColor = task.assignee === 'hamada' ? '#FF8A8A' : task.assignee === 'takasaki' ? '#6BCBFF' : 'transparent';
+      var assigneeColor = task.assignee === 'hamada' ? '#FF8A8A' : task.assignee === 'takasaki' ? '#6BCBFF' : task.assignee === 'kaikawa' ? '#B39DDB' : 'transparent';
       var assigneeDot = '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + assigneeColor + ';flex-shrink:0;margin-right:5px;margin-top:2px;' + (task.assignee ? '' : 'border:1px solid #ccc;') + '" title="' + esc(assigneeLabel || '未設定') + '"></span>';
 
       // IDを安全にonclickに渡す（文字列IDに対応）
@@ -8242,6 +8261,7 @@
     window._waInputMonth = now.getFullYear() + '-' + ('0'+(now.getMonth()+1)).slice(-2);
     window._waCalMonth   = window._waInputMonth;
     window._waCache      = {};
+    window._waStaffId    = 'takasaki'; // 勤務予定共有ページで現在選択中の担当者
   })();
 
   // 「時間データが何かある」判定：空欄かどうかだけ見る
@@ -8281,10 +8301,19 @@
   function initWorkAvailabilityPage() {
     document.getElementById('wa-input-month-label').textContent = waMonthLabel(window._waInputMonth);
     document.getElementById('wa-cal-month-label').textContent   = waMonthLabel(window._waCalMonth);
+    var sel = document.getElementById('wa-staff-select');
+    if (sel) sel.value = window._waStaffId;
     // デフォルトで入力タブを表示
     document.getElementById('wa-panel-input').style.display    = '';
     document.getElementById('wa-panel-calendar').style.display = 'none';
     document.querySelectorAll('.wa-tab').forEach(function(t,i){ t.classList.toggle('active', i===0); });
+    loadAndRenderWaInput();
+    loadAndRenderWaCalendar();
+  }
+
+  // 担当者を切り替えて入力・カレンダーの両方を再読み込みする
+  function switchWaStaff(staffId) {
+    window._waStaffId = staffId;
     loadAndRenderWaInput();
     loadAndRenderWaCalendar();
   }
@@ -8350,7 +8379,7 @@
   }
 
   function loadAndRenderWaInput() {
-    var staffId = 'takasaki';
+    var staffId = window._waStaffId;
     var tbody = document.getElementById('wa-input-tbody');
     if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#bbb;padding:16px;">読み込み中…</td></tr>';
     loadWorkAvailability(staffId, window._waInputMonth).then(function(map) {
@@ -8359,7 +8388,7 @@
   }
 
   function loadAndRenderWaCalendar() {
-    var staffId = 'takasaki';
+    var staffId = window._waStaffId;
     var grid = document.getElementById('wa-calendar-grid');
     if (grid) grid.innerHTML = '<div style="text-align:center;color:#bbb;padding:24px;">読み込み中…</div>';
     loadWorkAvailability(staffId, window._waCalMonth).then(function(map) {
@@ -8475,8 +8504,8 @@
   }
 
   function saveWorkAvailability() {
-    var staffId   = 'takasaki';
-    var staffName = '笠田';
+    var staffId   = window._waStaffId;
+    var staffName = ASSIGNEE_LABEL[staffId] || staffId;
     var tbody     = document.getElementById('wa-input-tbody');
     if (!tbody) return;
     var records = [], hasWarning = false;
