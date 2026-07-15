@@ -378,6 +378,7 @@
     .status-inprogress { background: #fff3e0; color: #e65100; }
     .status-waiting    { background: #ede7f6; color: #4527a0; }
     .status-terminated { background: #fafafa; color: #9e9e9e; border: 1px solid #e0e0e0; }
+    .status-spot       { background: #fff3e0; color: #a15c00; }
     /* 旧ステータス（後方互換） */
     .status-inactive { background: #fafafa; color: #9e9e9e; border: 1px solid #e0e0e0; }
     .status-new      { background: #e3f2fd; color: #1565c0; }
@@ -1028,6 +1029,7 @@
         <div class="tab active" onclick="setClientTabFilter('all', this)">すべて</div>
         <div class="tab" onclick="setClientTabFilter('prospect', this)">見込み</div>
         <div class="tab" onclick="setClientTabFilter('active', this)">契約中</div>
+        <div class="tab" onclick="setClientTabFilter('spot', this)">スポット</div>
         <div class="tab" onclick="setClientTabFilter('terminated', this)">契約終了</div>
       </div>
       <div class="client-table-wrap">
@@ -1089,8 +1091,13 @@
             <select id="client-form-status" class="form-select">
               <option value="prospect">見込み</option>
               <option value="active">契約中</option>
+              <option value="spot">スポット（単発対応のみ）</option>
               <option value="terminated">契約終了</option>
             </select>
+          </div>
+          <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-top:22px;">
+            <input id="client-form-spot-work" type="checkbox" style="width:16px;height:16px;" />
+            <label class="form-label" for="client-form-spot-work" style="margin:0;">顧問契約とは別にスポット業務も行っている</label>
           </div>
           <!-- 給与関連 -->
           <div class="form-group" style="grid-column:1/-1;margin-top:6px;">
@@ -1418,6 +1425,7 @@
               <th>タイトル</th>
               <th>担当者</th>
               <th>作業時間</th>
+              <th></th>
             </tr>
           </thead>
           <tbody id="payroll-record-tbody"></tbody>
@@ -1473,6 +1481,7 @@
               <th>担当者</th>
               <th>期限日</th>
               <th>作業時間</th>
+              <th></th>
             </tr>
           </thead>
           <tbody id="done-tbody"></tbody>
@@ -1939,6 +1948,75 @@
         <div style="display:flex;gap:10px;margin-top:20px;">
           <button class="btn btn-primary" onclick="saveTodoDetailModal()">保存する</button>
           <button class="btn btn-secondary" onclick="closeTodoDetailModal()">閉じる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 完了一覧・給与計算記録 共通 編集モーダル -->
+  <div id="archive-edit-modal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeArchiveEditModal()">
+    <div class="modal-dialog" style="width:min(520px,95vw);">
+      <div class="modal-header">
+        <span class="modal-title">記録の編集</span>
+        <button class="modal-close" onclick="closeArchiveEditModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="aem-id" />
+        <input type="hidden" id="aem-source" />
+        <div class="form-grid" style="gap:14px;">
+          <div class="form-group">
+            <label class="form-label">クライアント</label>
+            <input type="text" id="aem-client" class="form-input" />
+          </div>
+          <div class="form-group" id="aem-category-group">
+            <label class="form-label">業務種別</label>
+            <select id="aem-category" class="form-select"></select>
+          </div>
+          <div class="form-group full">
+            <label class="form-label">タイトル</label>
+            <input type="text" id="aem-title" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">担当者</label>
+            <select id="aem-assignee" class="form-select">
+              <option value="">未設定</option>
+              <option value="hamada">佐藤</option>
+              <option value="takasaki">笠田</option>
+              <option value="kaikawa">貝川</option>
+            </select>
+          </div>
+          <div class="form-group" id="aem-due-group">
+            <label class="form-label">期限</label>
+            <input type="date" id="aem-due" class="form-input" />
+          </div>
+          <div class="form-group full" id="aem-memo-group">
+            <label class="form-label">メモ</label>
+            <textarea id="aem-memo" class="form-textarea" style="min-height:64px;"></textarea>
+          </div>
+          <div class="form-group full">
+            <div style="font-size:0.78rem;font-weight:600;color:#9e9e9e;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #e8f0e8;">作業時間</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">開始時間（任意）</label>
+            <input id="aem-work-start" class="form-input" type="time" oninput="calcArchiveEditWorkMinutes()" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">終了時間（任意）</label>
+            <input id="aem-work-end" class="form-input" type="time" oninput="calcArchiveEditWorkMinutes()" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">作業時間（分）</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input id="aem-work-minutes" class="form-input" type="number" min="0" step="5" placeholder="例：45"
+                style="width:100px;"
+                oninput="document.getElementById('aem-work-display').textContent=minsToLabel(this.value)" />
+              <span id="aem-work-display" style="font-size:0.85rem;color:#5a7a5e;min-width:60px;"></span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px;">
+          <button class="btn btn-primary" onclick="saveArchiveEdit()">保存する</button>
+          <button class="btn btn-secondary" onclick="closeArchiveEditModal()">閉じる</button>
         </div>
       </div>
     </div>
@@ -3611,7 +3689,7 @@
     if (wtClient) {
       var cur = wtClient.value;
       wtClient.innerHTML = '<option value="">すべて</option>';
-      loadClients().filter(function(c) { return c.status === 'active'; }).forEach(function(c) {
+      loadClients().filter(function(c) { return c.status === 'active' || c.status === 'spot'; }).forEach(function(c) {
         var opt = document.createElement('option');
         opt.value = c.name; opt.textContent = c.name;
         if (c.name === cur) opt.selected = true;
@@ -4140,7 +4218,8 @@
         '<td>' + esc(t.text) + '</td>' +
         '<td>' + esc(asgn) + '</td>' +
         '<td>' + esc(dueDate) + '</td>' +
-        '<td style="white-space:nowrap;">' + (timeRange ? esc(timeRange) : '—') + '</td>';
+        '<td style="white-space:nowrap;">' + (timeRange ? esc(timeRange) : '—') + '</td>' +
+        '<td><button class="btn btn-secondary" style="font-size:0.76rem;padding:3px 10px;" onclick="openArchiveEditModal(\'' + esc(String(t.id)) + '\',\'record\')">編集</button></td>';
       tbody.appendChild(tr);
     });
   }
@@ -4191,6 +4270,7 @@
         '<td style="white-space:nowrap;">' +
           (timeRange ? esc(timeRange) : '—') +
         '</td>' +
+        '<td><button class="btn btn-secondary" style="font-size:0.76rem;padding:3px 10px;" onclick="openArchiveEditModal(\'' + esc(String(t.id)) + '\',\'payroll\')">編集</button></td>' +
         '</tr>';
     }).join('');
   }
@@ -4362,7 +4442,8 @@
     '契約開始日': 'contractStart', 'ステータス': 'status',
     '給与計算': 'payroll', '締め日': 'payrollCloseDay', '支払日': 'payrollPayDay',
     'ストレスチェック': 'stressCheck', 'ストレスチェック月': 'stressCheckMonth',
-    'メモ': 'memo', '作成日時': 'createdAt', '更新日時': 'updatedAt', '有効フラグ': 'active'
+    'メモ': 'memo', '作成日時': 'createdAt', '更新日時': 'updatedAt', '有効フラグ': 'active',
+    'スポット業務': 'spotWork'
   };
 
   // GASからクライアント一覧を取得
@@ -4378,7 +4459,7 @@
         console.log('[fetchClientsFromSheet] 取得件数:', rows.length);
         // ステータスの日本語→英語変換
         var CLIENT_STATUS_JP_TO_CODE = {
-          '見込み': 'prospect', '契約中': 'active', '契約終了': 'terminated'
+          '見込み': 'prospect', '契約中': 'active', 'スポット': 'spot', '契約終了': 'terminated'
         };
         clientsCache = rows.map(function(row) {
           var c = {};
@@ -4392,6 +4473,7 @@
           if (!c.status) c.status = 'active';
           if (!c.contact) c.contact = '';
           if (!c.memo) c.memo = '';
+          c.spotWork = (c.spotWork === 'TRUE' || c.spotWork === true);
           return c;
         }).filter(function(c) {
           // 有効フラグがFALSEのものは除外
@@ -4412,7 +4494,7 @@
   }
 
   // クライアントをスプレッドシートに新規登録
-  var CLIENT_STATUS_CODE_TO_JP = { 'prospect': '見込み', 'active': '契約中', 'terminated': '契約終了' };
+  var CLIENT_STATUS_CODE_TO_JP = { 'prospect': '見込み', 'active': '契約中', 'spot': 'スポット', 'terminated': '契約終了' };
   function saveClientToSheet(clientData, clientId) {
     var statusJp = CLIENT_STATUS_CODE_TO_JP[clientData.status] || clientData.status || '契約中';
     var postData = {
@@ -4429,7 +4511,8 @@
       '支払日':           clientData.payrollPayDay || '',
       'ストレスチェック':   clientData.stressCheck || '',
       'ストレスチェック月': clientData.stressCheckMonth || '',
-      'メモ':             clientData.memo || ''
+      'メモ':             clientData.memo || '',
+      'スポット業務':     clientData.spotWork ? 'TRUE' : 'FALSE'
     };
     // クライアントIDが指定されている場合は「新規追加」ではなく「既存行の更新」にする
     if (clientId) {
@@ -4577,6 +4660,7 @@
   var CLIENT_STATUS = {
     prospect:   { cls: 'status-prospect',   label: '見込み'   },
     active:     { cls: 'status-active',     label: '契約中'   },
+    spot:       { cls: 'status-spot',       label: 'スポット' },
     terminated: { cls: 'status-terminated', label: '契約終了' }
   };
 
@@ -4627,7 +4711,7 @@
 
   // 「契約中」クライアントのみでプルダウンを再構築（複数セレクト対応）
   function rebuildTaskClientSelect() {
-    var clients = loadClients().filter(function(c) { return c.status === 'active'; });
+    var clients = loadClients().filter(function(c) { return c.status === 'active' || c.status === 'spot'; });
     ['new-task-client', 'record-client', 'consult-client', 'inquiry-client'].forEach(function(selId) {
       var sel = document.getElementById(selId);
       if (!sel) return;
@@ -4647,14 +4731,15 @@
   function renderClients() {
     var clients = loadClients();
     // タブラベル更新
-    var counts = { all: clients.length, prospect: 0, active: 0, terminated: 0 };
+    var counts = { all: clients.length, prospect: 0, active: 0, spot: 0, terminated: 0 };
     clients.forEach(function(c) { if (counts[c.status] !== undefined) counts[c.status]++; });
     var tabs = document.querySelectorAll('#client-tabs .tab');
-    if (tabs.length >= 4) {
+    if (tabs.length >= 5) {
       tabs[0].textContent = 'すべて (' + counts.all + ')';
       tabs[1].textContent = '見込み (' + counts.prospect + ')';
       tabs[2].textContent = '契約中 (' + counts.active + ')';
-      tabs[3].textContent = '契約終了 (' + counts.terminated + ')';
+      tabs[3].textContent = 'スポット (' + counts.spot + ')';
+      tabs[4].textContent = '契約終了 (' + counts.terminated + ')';
     }
 
     // タブフィルター
@@ -4692,7 +4777,9 @@
           '<td>' + esc(String(c.employees || 0)) + '名</td>' +
           '<td>' + esc(c.manager || '—') + '</td>' +
           '<td>' + esc(dateStr) + '</td>' +
-          '<td><span class="status-badge ' + meta.cls + '">' + meta.label + '</span></td>' +
+          '<td><span class="status-badge ' + meta.cls + '">' + meta.label + '</span>' +
+            (c.spotWork ? ' <span class="status-badge status-spot" title="顧問契約とは別にスポット業務あり">スポット業務あり</span>' : '') +
+          '</td>' +
           '<td style="white-space:nowrap;">' +
             '<button onclick="openClientDetail(' + c.id + ')" class="btn btn-secondary" style="padding:5px 12px;font-size:0.8rem;margin-right:4px;">詳細</button>' +
             '<button onclick="openClientModal(' + c.id + ')" style="background:none;border:1px solid #dde5dd;border-radius:6px;cursor:pointer;font-size:0.78rem;color:#5a7a5e;padding:4px 10px;margin-right:4px;">編集</button>' +
@@ -4772,6 +4859,7 @@
     document.getElementById('client-form-contact').value   = c ? (c.contact   || '') : '';
     document.getElementById('client-form-start').value     = c ? (c.contractStart || '') : '';
     document.getElementById('client-form-status').value    = c ? c.status           : 'active';
+    document.getElementById('client-form-spot-work').checked = c ? !!c.spotWork : false;
     document.getElementById('client-form-memo').value      = c ? (c.memo       || '') : '';
 
     // 担当者プルダウンを構築
@@ -4824,6 +4912,7 @@
       contact:          document.getElementById('client-form-contact').value.trim(),
       contractStart:    document.getElementById('client-form-start').value,
       status:           document.getElementById('client-form-status').value,
+      spotWork:         document.getElementById('client-form-spot-work').checked,
       payroll:          document.getElementById('client-form-payroll').value,
       payrollCloseDay:  document.getElementById('client-form-close-day').value,
       payrollPayDay:    document.getElementById('client-form-pay-day').value,
@@ -6166,7 +6255,7 @@
 
   function loadActiveClientsIntoBusySeason() {
     var year = (document.getElementById('bs-year') || {}).value || String(new Date().getFullYear());
-    var clients = loadClients().filter(function(c) { return c.status === 'active'; });
+    var clients = loadClients().filter(function(c) { return c.status === 'active' || c.status === 'spot'; });
     if (clients.length === 0) {
       alert('契約中のクライアントがありません。');
       return;
@@ -6441,7 +6530,7 @@
       monthEl.value = thisMonthJST();
     }
     // 顧問先プルダウンを最新クライアントで再構築
-    var clients = loadClients().filter(function(c) { return c.status === 'active'; });
+    var clients = loadClients().filter(function(c) { return c.status === 'active' || c.status === 'spot'; });
     var tsClient = document.getElementById('ts-client');
     if (tsClient) {
       var cur = tsClient.value;
@@ -6691,6 +6780,118 @@
       var disp = document.getElementById('todo-modal-work-display');
       if (disp) disp.textContent = minsToLabel(diff);
     }
+  }
+
+  // ===== 完了一覧・給与計算記録 共通 編集モーダル =====
+
+  function calcArchiveEditWorkMinutes() {
+    var s = (document.getElementById('aem-work-start') || {}).value;
+    var e = (document.getElementById('aem-work-end')   || {}).value;
+    if (!s || !e) return;
+    var sm = parseInt(s.split(':')[0], 10) * 60 + parseInt(s.split(':')[1], 10);
+    var em = parseInt(e.split(':')[0], 10) * 60 + parseInt(e.split(':')[1], 10);
+    var diff = em - sm;
+    if (diff <= 0) return;
+    var minEl = document.getElementById('aem-work-minutes');
+    if (minEl) {
+      minEl.value = diff;
+      var disp = document.getElementById('aem-work-display');
+      if (disp) disp.textContent = minsToLabel(diff);
+    }
+  }
+
+  // source: 'record'（完了一覧・記録シート） または 'payroll'（給与計算記録シート）
+  function openArchiveEditModal(id, source) {
+    var list = source === 'payroll' ? loadPayrollRecords() : loadRecords();
+    var t = null;
+    list.forEach(function(r) { if (String(r.id) === String(id)) t = r; });
+    if (!t) { alert('対象のデータが見つかりませんでした。画面を再読み込みしてから、もう一度お試しください。'); return; }
+
+    document.getElementById('aem-id').value     = id;
+    document.getElementById('aem-source').value = source;
+    document.getElementById('aem-client').value = t.client || '';
+    document.getElementById('aem-title').value  = t.text   || '';
+    document.getElementById('aem-assignee').value = t.assignee || '';
+    document.getElementById('aem-work-start').value   = t.workStart   || '';
+    document.getElementById('aem-work-end').value     = t.workEnd     || '';
+    document.getElementById('aem-work-minutes').value = t.workMinutes || '';
+    document.getElementById('aem-work-display').textContent = t.workMinutes ? minsToLabel(t.workMinutes) : '';
+
+    var catGroup = document.getElementById('aem-category-group');
+    var dueGroup = document.getElementById('aem-due-group');
+    var memoGroup = document.getElementById('aem-memo-group');
+    var catSel = document.getElementById('aem-category');
+
+    if (source === 'payroll') {
+      // 給与計算記録：業務種別・期限は無く、メモがある
+      catGroup.style.display = 'none';
+      dueGroup.style.display = 'none';
+      memoGroup.style.display = '';
+      document.getElementById('aem-memo').value = t.memo || '';
+    } else {
+      // 記録：業務種別・期限があり、メモは無い
+      catGroup.style.display = '';
+      dueGroup.style.display = '';
+      memoGroup.style.display = 'none';
+      catSel.innerHTML = buildTaskTypeOpts(t.category);
+      document.getElementById('aem-due').value = t.due || '';
+    }
+
+    document.getElementById('archive-edit-modal').style.display = 'flex';
+  }
+
+  function closeArchiveEditModal() {
+    document.getElementById('archive-edit-modal').style.display = 'none';
+  }
+
+  function saveArchiveEdit() {
+    var id     = document.getElementById('aem-id').value;
+    var source = document.getElementById('aem-source').value;
+    var sheetName = source === 'payroll' ? SHEET_PAYROLL : SHEET_RECORD;
+    var assigneeVal = document.getElementById('aem-assignee').value;
+    var assigneeName = ASSIGNEE_LABEL[assigneeVal] || assigneeVal || '';
+
+    var postData = {
+      sheet:      sheetName,
+      action:     'updateRow',
+      updateKey:  'ID',
+      'ID':       id,
+      'クライアント': document.getElementById('aem-client').value,
+      'タスク内容':   document.getElementById('aem-title').value,
+      '担当者':       assigneeName,
+      '開始時刻':     document.getElementById('aem-work-start').value,
+      '終了時刻':     document.getElementById('aem-work-end').value,
+      '作業時間':     document.getElementById('aem-work-minutes').value
+    };
+
+    if (source === 'payroll') {
+      postData['メモ'] = document.getElementById('aem-memo').value;
+    } else {
+      postData['業務種別'] = document.getElementById('aem-category').value;
+      postData['期限']     = document.getElementById('aem-due').value;
+    }
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(postData)
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (!result || result.success !== true) throw new Error((result && result.error) || '不明なエラー');
+        closeArchiveEditModal();
+        if (source === 'payroll') {
+          return fetchPayrollRecordsFromSheet().then(function() { renderPayrollRecord(); });
+        } else {
+          return fetchRecordsFromSheet().then(function() { renderDoneList(); });
+        }
+      })
+      .then(function() {
+        try { renderTimeSummary(); } catch (e) {}
+      })
+      .catch(function(e) {
+        alert('保存に失敗しました: ' + e.message);
+      });
   }
 
   // 作業時間集計CSVエクスポート
