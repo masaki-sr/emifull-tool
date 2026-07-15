@@ -3644,6 +3644,12 @@
     var assigneeVal = (document.getElementById('rec-assignee') || {}).value || '';
     var assigneeName = ASSIGNEE_LABEL[assigneeVal] || assigneeVal || '';
     var clientVal    = (document.getElementById('record-client') || {}).value || '';
+    var billingVal   = (document.getElementById('rec-billing')     || {}).value || '';
+    var detailVal    = (document.getElementById('rec-detail')      || {}).value || '';
+    var memoVal      = (document.getElementById('rec-memo')        || {}).value || '';
+    var workStart    = (document.getElementById('rec-work-start')   || {}).value || '';
+    var workEnd      = (document.getElementById('rec-work-end')     || {}).value || '';
+    var workMinutes  = (document.getElementById('rec-work-minutes') || {}).value || '';
     var now = todayJST();
 
     var postData = {
@@ -3653,6 +3659,9 @@
       '期限':         (document.getElementById('rec-due') || {}).value || '',
       '担当者':       assigneeName,
       '状態':         statusJp,
+      '請求区分':     billingVal,
+      '詳細':         detailVal,
+      'メモ':         memoVal,
       '優先度':       '',
       '作成日':       now,
       '更新日':       now
@@ -3666,12 +3675,30 @@
     .then(function(res) { return res.json(); })
     .then(function(result) {
       if (result && result.error) throw new Error(result.error);
-      var actType = PAYROLL_CATEGORIES.indexOf(category) >= 0 ? 'payroll' : 'record';
-      addActivity(actType, actText(clientVal, title, ' を記録に追加'));
-      clearRecord();
-      var msg = document.getElementById('rec-save-msg');
-      if (msg) { msg.style.display = ''; setTimeout(function() { msg.style.display = 'none'; }, 4000); }
-      return refreshFromSheet();
+
+      // 「完了」で保存した場合は、既存のTODO完了処理を使って
+      // 記録／給与計算記録シートへ正しくコピーする（作業時間も一緒に）
+      var afterComplete = Promise.resolve(true);
+      if (statusCode === 'done' && result && result.headers && result.savedData) {
+        var idIdx = result.headers.indexOf('ID');
+        var newId = idIdx !== -1 ? result.savedData[idIdx] : null;
+        if (newId) {
+          afterComplete = completeTodo(newId, {
+            workStart:   workStart,
+            workEnd:     workEnd,
+            workMinutes: workMinutes
+          });
+        }
+      }
+
+      return afterComplete.then(function() {
+        var actType = PAYROLL_CATEGORIES.indexOf(category) >= 0 ? 'payroll' : 'record';
+        addActivity(actType, actText(clientVal, title, ' を記録に追加'));
+        clearRecord();
+        var msg = document.getElementById('rec-save-msg');
+        if (msg) { msg.style.display = ''; setTimeout(function() { msg.style.display = 'none'; }, 4000); }
+        return refreshFromSheet();
+      });
     })
     .catch(function(e) {
       alert('記録の保存に失敗しました: ' + e.message);
