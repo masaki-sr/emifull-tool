@@ -6811,7 +6811,7 @@
     document.getElementById('aem-source').value = source;
     document.getElementById('aem-client').value = t.client || '';
     document.getElementById('aem-title').value  = t.text   || '';
-    document.getElementById('aem-assignee').value = t.assignee || '';
+    document.getElementById('aem-assignee').value = ASSIGNEE_NORMALIZE[t.assignee] || t.assignee || '';
     document.getElementById('aem-work-start').value   = t.workStart   || '';
     document.getElementById('aem-work-end').value     = t.workEnd     || '';
     document.getElementById('aem-work-minutes').value = t.workMinutes || '';
@@ -6847,7 +6847,7 @@
   function saveArchiveEdit() {
     var id     = document.getElementById('aem-id').value;
     var source = document.getElementById('aem-source').value;
-    var sheetName = source === 'payroll' ? SHEET_PAYROLL : SHEET_RECORD;
+    var sheetName = source === 'payroll' ? '給与計算記録' : '記録';
     var assigneeVal = document.getElementById('aem-assignee').value;
     var assigneeName = ASSIGNEE_LABEL[assigneeVal] || assigneeVal || '';
 
