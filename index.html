@@ -8553,8 +8553,14 @@
         if (res.success) {
           if (msgEl) msgEl.textContent = '';
           showWaToast('保存しました', false);
-          loadWorkAvailability(staffId, window._waInputMonth).then(function() { renderTodayWorkAvail(); });
-          loadAndRenderWaCalendar();
+          // 再取得はせず、保存した内容をそのままキャッシュへ反映して即座に画面を更新する
+          var savedMap = {};
+          records.forEach(function(r) { savedMap[r.date] = r; });
+          window._waCache[staffId + '_' + window._waInputMonth] = savedMap;
+          if (staffId === window._waStaffId && window._waCalMonth === window._waInputMonth) {
+            renderWorkAvailabilityCalendar(staffId, window._waCalMonth, savedMap);
+          }
+          if (staffId === 'takasaki') renderTodayWorkAvail();
         } else {
           if (msgEl) msgEl.textContent = '';
           showWaToast('保存に失敗しました: ' + (res.error || ''), true);
