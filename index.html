@@ -925,6 +925,7 @@
             <button id="filter-btn-hamada"   onclick="setFilter('hamada')"   class="btn btn-secondary" style="padding:4px 12px;font-size:0.78rem;display:inline-flex;align-items:center;gap:4px;">佐藤<span id="member-status-hamada" style="font-size:0.88rem;line-height:1;" title="在席">🟢</span></button>
             <button id="filter-btn-takasaki" onclick="setFilter('takasaki')" class="btn btn-secondary" style="padding:4px 12px;font-size:0.78rem;display:inline-flex;align-items:center;gap:4px;">笠田<span id="member-status-takasaki" style="font-size:0.88rem;line-height:1;" title="在席">🟢</span></button>
             <button id="filter-btn-kaikawa" onclick="setFilter('kaikawa')" class="btn btn-secondary" style="padding:4px 12px;font-size:0.78rem;display:inline-flex;align-items:center;gap:4px;">貝川<span id="member-status-kaikawa" style="font-size:0.88rem;line-height:1;" title="在席">🟢</span></button>
+            <button id="filter-btn-emifull" onclick="setFilter('emifull')" class="btn btn-secondary" style="padding:4px 12px;font-size:0.78rem;">えみふる</button>
             <select id="my-status-select" onchange="onMyStatusChange(this.value)" style="font-size:0.76rem;padding:3px 6px;border:1px solid #ccc;border-radius:4px;margin-left:6px;">
               <option value="normal">🟢 在席</option>
               <option value="phone">☎️ 電話</option>
@@ -952,6 +953,7 @@
             <option value="hamada">佐藤</option>
             <option value="takasaki">笠田</option>
             <option value="kaikawa">貝川</option>
+            <option value="emifull">えみふる</option>
           </select>
           <select id="new-task-status" class="form-select"
             style="width:82px;padding:8px 4px;font-size:0.80rem;flex-shrink:0;">
@@ -999,6 +1001,7 @@
                 <option value="佐藤">→佐藤</option>
                 <option value="笠田">→笠田</option>
                 <option value="貝川">→貝川</option>
+                <option value="えみふる">→えみふる（全員）</option>
               </select>
               <input id="msg-text" type="text" class="form-input" placeholder="メッセージを入力…"
                 style="flex:1;padding:3px 5px;font-size:0.74rem;" onkeydown="if(event.key==='Enter')sendQuickMsg()" />
@@ -1197,6 +1200,7 @@
             <option value="hamada">佐藤</option>
             <option value="takasaki">笠田</option>
             <option value="kaikawa">貝川</option>
+            <option value="emifull">えみふる</option>
           </select>
         </div>
         <div class="form-group">
@@ -1295,6 +1299,7 @@
               <option value="hamada">佐藤</option>
               <option value="takasaki">笠田</option>
               <option value="kaikawa">貝川</option>
+              <option value="emifull">えみふる</option>
             </select>
           </div>
           <div>
@@ -1598,6 +1603,7 @@
             <option value="hamada">佐藤</option>
             <option value="takasaki">笠田</option>
             <option value="kaikawa">貝川</option>
+            <option value="emifull">えみふる</option>
           </select>
         </div>
         <div class="form-group">
@@ -1693,6 +1699,7 @@
             <option value="hamada">佐藤</option>
             <option value="takasaki">笠田</option>
             <option value="kaikawa">貝川</option>
+            <option value="emifull">えみふる</option>
           </select>
         </div>
         <div class="form-group">
@@ -1855,6 +1862,7 @@
               <option value="hamada">佐藤</option>
               <option value="takasaki">笠田</option>
               <option value="kaikawa">貝川</option>
+              <option value="emifull">えみふる</option>
             </select>
           </div>
           <div class="form-group">
@@ -1934,6 +1942,7 @@
               <option value="hamada">佐藤</option>
               <option value="takasaki">笠田</option>
               <option value="kaikawa">貝川</option>
+              <option value="emifull">えみふる</option>
             </select>
           </div>
           <div class="form-group" id="aem-due-group">
@@ -2688,22 +2697,26 @@
   var ASSIGNEES = [
     { value: 'hamada',   label: '佐藤' },
     { value: 'takasaki', label: '笠田' },
-    { value: 'kaikawa',  label: '貝川' }
+    { value: 'kaikawa',  label: '貝川' },
+    { value: 'emifull',  label: 'えみふる' }
   ];
   // 表示名への変換マップ（レガシーデータの日本語表記にも対応）
   var ASSIGNEE_LABEL = {
     'hamada':   '佐藤',
     'takasaki': '笠田',
     'kaikawa':  '貝川',
+    'emifull':  'えみふる',
     '佐藤':     '佐藤',
     '笠田':     '笠田',
-    '貝川':     '貝川'
+    '貝川':     '貝川',
+    'えみふる': 'えみふる'
   };
   // 日本語保存値 → 正規ID への変換（loadTasks でマイグレーション）
   var ASSIGNEE_NORMALIZE = {
     '佐藤': 'hamada',
     '笠田': 'takasaki',
-    '貝川': 'kaikawa'
+    '貝川': 'kaikawa',
+    'えみふる': 'emifull'
   };
   // --- 担当者状態表示 ---
   var MEMBER_STATUS_MASTER = {
@@ -3061,7 +3074,7 @@
 
   // フィルターボタンの見た目を更新
   function updateFilterButtons() {
-    var ids = { '': 'all', 'hamada': 'hamada', 'takasaki': 'takasaki', 'kaikawa': 'kaikawa' };
+    var ids = { '': 'all', 'hamada': 'hamada', 'takasaki': 'takasaki', 'kaikawa': 'kaikawa', 'emifull': 'emifull' };
     Object.keys(ids).forEach(function(key) {
       var btn = document.getElementById('filter-btn-' + ids[key]);
       if (!btn) return;
@@ -3310,7 +3323,7 @@
         ? '<div style="font-size:0.75rem;color:#6a8a6e;margin-top:2px;">担当：' + esc(assigneeLabel) + '</div>'
         : '';
 
-      var assigneeColor = task.assignee === 'hamada' ? '#FF8A8A' : task.assignee === 'takasaki' ? '#6BCBFF' : task.assignee === 'kaikawa' ? '#B39DDB' : 'transparent';
+      var assigneeColor = task.assignee === 'hamada' ? '#FF8A8A' : task.assignee === 'takasaki' ? '#6BCBFF' : task.assignee === 'kaikawa' ? '#B39DDB' : task.assignee === 'emifull' ? '#8FBF8F' : 'transparent';
       var assigneeDot = '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + assigneeColor + ';flex-shrink:0;margin-right:5px;margin-top:2px;' + (task.assignee ? '' : 'border:1px solid #ccc;') + '" title="' + esc(assigneeLabel || '未設定') + '"></span>';
 
       // IDを安全にonclickに渡す（文字列IDに対応）
@@ -4565,7 +4578,7 @@
   }
 
   // 担当者マスタ（追加する場合はここに名前を追加するだけ）
-  var CLIENT_MANAGERS = ['佐藤', '笠田', '貝川'];
+  var CLIENT_MANAGERS = ['佐藤', '笠田', '貝川', 'えみふる'];
 
   function buildDayOpts(current) {
     var html = '<option value="">—</option>';
