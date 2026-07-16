@@ -1710,6 +1710,7 @@
             <option value="Chatwork">Chatwork</option>
             <option value="メール">メール</option>
             <option value="LINE">LINE</option>
+            <option value="オンライン">オンライン</option>
             <option value="訪問">訪問</option>
           </select>
         </div>
@@ -4659,7 +4660,7 @@
 
   // 「契約中」クライアントのみでプルダウンを再構築（複数セレクト対応）
   function rebuildTaskClientSelect() {
-    var clients = loadClients().filter(function(c) { return c.status === 'active' || c.status === 'spot'; });
+    var clients = loadClients().filter(function(c) { return c.status === 'active' || c.status === 'spot' || c.status === 'prospect'; });
     ['new-task-client', 'record-client', 'consult-client', 'inquiry-client'].forEach(function(selId) {
       var sel = document.getElementById(selId);
       if (!sel) return;
