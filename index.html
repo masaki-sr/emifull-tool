@@ -981,7 +981,7 @@
         <div class="dash-sub-grid">
           <!-- 本日の笠田 -->
           <div onclick="showPageByName('work-avail')" class="busy-season-card" style="background:linear-gradient(135deg,#e8faf3 0%,#d0f0e4 100%);border-left-color:#52c78a;">
-            <div class="busy-season-title" style="color:#1b5e3a;">🍉 本日の笠田</div>
+            <div class="busy-season-title" style="color:#1b5e3a;">🍉 本日の勤務予定</div>
             <div id="work-avail-today-content" class="busy-season-body" style="white-space:normal;line-height:1.5;min-height:28px;">
               <span style="color:#9e9e9e;font-size:0.75rem;">読み込み中…</span>
             </div>
@@ -8641,7 +8641,7 @@
           if (staffId === window._waStaffId && window._waCalMonth === window._waInputMonth) {
             renderWorkAvailabilityCalendar(staffId, window._waCalMonth, savedMap);
           }
-          if (staffId === 'takasaki') renderTodayWorkAvail();
+          renderTodayWorkAvail();
         } else {
           if (msgEl) msgEl.textContent = '';
           showWaToast('保存に失敗しました: ' + (res.error || ''), true);
@@ -8655,27 +8655,45 @@
 
   function loadTodayWorkAvail() {
     var today = todayJST();
-    loadWorkAvailability('takasaki', today.substring(0, 7)).then(function() { renderTodayWorkAvail(); });
+    var month = today.substring(0, 7);
+    Promise.all(
+      ['hamada', 'takasaki', 'kaikawa'].map(function(staffId) {
+        return loadWorkAvailability(staffId, month);
+      })
+    ).then(function() { renderTodayWorkAvail(); });
   }
 
   function renderTodayWorkAvail() {
     var content = document.getElementById('work-avail-today-content');
     if (!content) return;
-    var today    = todayJST();
-    var cacheKey = 'takasaki_' + today.substring(0, 7);
-    var map      = window._waCache[cacheKey] || {};
-    var rec      = map[today];
-    if (!rec || !rec.status) {
-      content.innerHTML = '<span style="color:#9e9e9e;font-size:0.75rem;">今日は登録なし</span>';
-      return;
-    }
-    var si = WA_STATUS_INFO[rec.status] || {};
-    var badge = '<span class="wa-cal-status ' + (si.cls||'') + '">' + (si.label||rec.status) + '</span>';
-    var fmtStart = formatTimeHHMM(rec.start_time);
-    var fmtEnd   = formatTimeHHMM(rec.end_time);
-    var times = (fmtStart || fmtEnd) ? '<div style="font-size:0.85rem;margin-top:3px;">' + esc(fmtStart) + '〜' + esc(fmtEnd) + '</div>' : '';
-    var memo  = rec.memo ? '<div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">メモ：' + esc(rec.memo) + '</div>' : '';
-    content.innerHTML = badge + times + memo;
+    var today = todayJST();
+    var month = today.substring(0, 7);
+
+    var rowsHtml = ['hamada', 'takasaki', 'kaikawa'].map(function(staffId) {
+      var name = ASSIGNEE_LABEL[staffId] || staffId;
+      var cacheKey = staffId + '_' + month;
+      var map = window._waCache[cacheKey] || {};
+      var rec = map[today];
+
+      var body;
+      if (!rec || !rec.status) {
+        body = '<span style="color:#9e9e9e;font-size:0.75rem;">登録なし</span>';
+      } else {
+        var si = WA_STATUS_INFO[rec.status] || {};
+        var badge = '<span class="wa-cal-status ' + (si.cls || '') + '">' + (si.label || rec.status) + '</span>';
+        var fmtStart = formatTimeHHMM(rec.start_time);
+        var fmtEnd   = formatTimeHHMM(rec.end_time);
+        var times = (fmtStart || fmtEnd) ? ' <span style="font-size:0.82rem;">' + esc(fmtStart) + '〜' + esc(fmtEnd) + '</span>' : '';
+        var memo  = rec.memo ? '<div style="font-size:0.74rem;color:var(--text-muted);margin-top:1px;">メモ：' + esc(rec.memo) + '</div>' : '';
+        body = badge + times + memo;
+      }
+      return '<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">' +
+               '<span style="font-size:0.8rem;font-weight:600;min-width:2.6em;">' + esc(name) + '</span>' +
+               '<span>' + body + '</span>' +
+             '</div>';
+    }).join('');
+
+    content.innerHTML = rowsHtml;
   }
 
 </script>
