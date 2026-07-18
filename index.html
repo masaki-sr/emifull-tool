@@ -3500,10 +3500,24 @@
       });
       return;
     }
-    saveTasks(loadTasks().filter(function(t) { return String(t.id) !== String(id); }));
-    renderTasks();
-    updateAllStats();
-    if (task) addActivity('todo_deleted', actText(task.client, task.text, ' を削除'));
+
+    // 通常TODO → スプレッドシートの該当行を実際に削除する
+    fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ sheet: 'TODO', action: 'deleteRow', deleteKey: 'ID', 'ID': id })
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (result && result.error) throw new Error(result.error);
+        saveTasks(loadTasks().filter(function(t) { return String(t.id) !== String(id); }));
+        renderTasks();
+        updateAllStats();
+        if (task) addActivity('todo_deleted', actText(task.client, task.text, ' を削除'));
+      })
+      .catch(function(e) {
+        alert('削除に失敗しました: ' + e.message);
+      });
   }
 
   function startEdit(id) {
