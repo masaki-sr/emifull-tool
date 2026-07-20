@@ -875,6 +875,13 @@
 </aside>
 
 <!-- ===== メインコンテンツ ===== -->
+<div id="global-loading-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9998;background:#e8f5e9;color:#2e7d32;padding:8px 16px;font-size:0.85rem;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.15);">
+  <span class="global-loading-spinner" style="display:inline-block;width:12px;height:12px;border:2px solid #a5d6a7;border-top-color:#2e7d32;border-radius:50%;margin-right:8px;vertical-align:middle;animation:global-loading-spin 0.8s linear infinite;"></span>
+  <span id="global-loading-msg">スプレッドシートから読み込み中…</span>
+</div>
+<style>
+@keyframes global-loading-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
 <div id="global-fetch-error" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#c62828;color:#fff;padding:10px 16px;font-size:0.9rem;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.3);">
   <strong>⚠ 通信エラー：</strong><span id="global-fetch-error-msg"></span>
   <button onclick="document.getElementById('global-fetch-error').style.display='none'" style="margin-left:12px;background:transparent;border:1px solid #fff;color:#fff;padding:2px 8px;cursor:pointer;border-radius:3px;">✕</button>
@@ -2606,6 +2613,22 @@
     banner.style.display = 'block';
   }
 
+  var _globalLoadingCount = 0;
+  function showGlobalLoading(msg) {
+    _globalLoadingCount++;
+    var banner = document.getElementById('global-loading-banner');
+    var msgEl  = document.getElementById('global-loading-msg');
+    if (!banner) return;
+    if (msgEl && msg) msgEl.textContent = msg;
+    banner.style.display = 'block';
+  }
+  function hideGlobalLoading() {
+    _globalLoadingCount = Math.max(0, _globalLoadingCount - 1);
+    if (_globalLoadingCount > 0) return;
+    var banner = document.getElementById('global-loading-banner');
+    if (banner) banner.style.display = 'none';
+  }
+
   // ===== TODO / Google Sheets連携 =====
   var GAS_URL = '/api/gas';
 
@@ -2944,6 +2967,7 @@
 
   // データ再取得して画面更新
   function refreshFromSheet() {
+    showGlobalLoading('スプレッドシートから読み込み中…');
     return Promise.allSettled([
       fetchTasksFromSheet(),
       fetchConsultTodosFromSheet(),
@@ -2956,6 +2980,7 @@
       fetchMemberStatuses(),
       fetchQuickMessages()
     ]).then(function(results) {
+      hideGlobalLoading();
       var SHEET_NAMES = ['TODOシート', '相談記録TODO', '記録', '給与計算記録', 'クライアント', '行政問い合わせ記録', 'アクティビティ', '休日マスタ', '担当者状態', 'メッセージ'];
       var failedInfo = results.map(function(r, i) { return r.status === 'rejected' ? SHEET_NAMES[i] : null; }).filter(Boolean);
       if (failedInfo.length > 0) {
@@ -8308,6 +8333,7 @@
 
   // ① 必須データを順番に取得（同時多発させない）
   (function runInitialLoad() {
+    showGlobalLoading('スプレッドシートを読み込んでいます…');
     fetchClientsFromSheet()
       .then(function() {
         try { renderClients(); } catch(e) {}
@@ -8355,6 +8381,7 @@
           }
         } catch(e) {}
         // ② 初期表示が済んだら、残りを順番に遅延読み込み
+        hideGlobalLoading();
         runDeferredInitLoads();
       });
   })();
