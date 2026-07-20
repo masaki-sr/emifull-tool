@@ -2388,16 +2388,16 @@
     if (name === 'clients')        renderClients();
     if (name === 'record')         initRecordForm();
     if (name === 'timesummary')    initTimeSummaryPage();
-    if (name === 'payroll-record') { fetchPayrollRecordsFromSheet().then(function() { renderPayrollRecord(); }); }
-    if (name === 'done')           { fetchRecordsFromSheet().then(function() { renderDoneList(); }); }
+    if (name === 'payroll-record') { showGlobalLoading('給与計算記録を読み込み中…'); fetchPayrollRecordsFromSheet().then(function() { renderPayrollRecord(); }).then(hideGlobalLoading, hideGlobalLoading); }
+    if (name === 'done')           { showGlobalLoading('完了一覧を読み込み中…'); fetchRecordsFromSheet().then(function() { renderDoneList(); }).then(hideGlobalLoading, hideGlobalLoading); }
     if (name === 'consultation')   initConsultPage();
-    if (name === 'inquiry')        initInquiryPage();
+    if (name === 'inquiry')        { showGlobalLoading('行政問い合わせ記録を読み込み中…'); Promise.resolve(initInquiryPage()).then(hideGlobalLoading, hideGlobalLoading); }
     if (name === 'calendar')       initCalendarPage();
-    if (name === 'busy-season')    initBusySeasonPage();
-    if (name === 'stress-check')   { try { initStressCheckPage(); } catch(e) { console.error('[stress-check] 初期化エラー:', e); } }
-    if (name === 'retainer')       { try { initRetainerPage(); } catch(e) { console.error('[retainer] 初期化エラー:', e); } }
+    if (name === 'busy-season')    { showGlobalLoading('算定年更管理を読み込み中…'); Promise.resolve(initBusySeasonPage()).then(hideGlobalLoading, hideGlobalLoading); }
+    if (name === 'stress-check')   { showGlobalLoading('ストレスチェック管理を読み込み中…'); try { Promise.resolve(initStressCheckPage()).then(hideGlobalLoading, hideGlobalLoading); } catch(e) { console.error('[stress-check] 初期化エラー:', e); hideGlobalLoading(); } }
+    if (name === 'retainer')       { showGlobalLoading('顧問料設定を読み込み中…'); try { Promise.resolve(initRetainerPage()).then(hideGlobalLoading, hideGlobalLoading); } catch(e) { console.error('[retainer] 初期化エラー:', e); hideGlobalLoading(); } }
     if (name === 'dashboard')      { renderActivityList(); refreshDashboardLight(); }
-    if (name === 'work-avail')     initWorkAvailabilityPage();
+    if (name === 'work-avail')     { showGlobalLoading('勤務予定を読み込み中…'); Promise.resolve(initWorkAvailabilityPage()).then(hideGlobalLoading, hideGlobalLoading); }
   }
 
   // モバイルメニュー開閉
@@ -3006,6 +3006,7 @@
   // ダッシュボードを開いたときの軽量リフレッシュ。
   // 重い「記録 / 給与計算記録」は再取得せず（各ページで取得）、GASを同時に叩かないよう1件ずつ取得する。
   function refreshDashboardLight() {
+    showGlobalLoading('最新のデータを読み込み中…');
     fetchTasksFromSheet()
       .then(function() {
         try { renderTasks(); } catch(e) {}
@@ -3020,7 +3021,8 @@
         try { updateAllStats(); } catch(e) {}
       })
       .then(function() { return fetchActivityLog().catch(function(){}); })
-      .then(function() { try { renderActivityList(); } catch(e) {} });
+      .then(function() { try { renderActivityList(); } catch(e) {} })
+      .then(hideGlobalLoading, hideGlobalLoading);
     // 本日の勤務予定も最新化（上のチェーンとは独立、gasGetJsonが同時実行数を抑える）
     try { loadTodayWorkAvail(); } catch(e) {}
   }
@@ -5098,7 +5100,7 @@
     }
     // まずキャッシュで即描画 → ページを開いたタイミングで最新を取得（遅延読み込み）
     renderInquiryList();
-    fetchInquiriesFromSheet()
+    return fetchInquiriesFromSheet()
       .then(function() {
         try { renderInquiryList(); } catch(e) {}
         try { updateInquiryStat(); } catch(e) {}
@@ -6140,13 +6142,13 @@
       if (y === thisYear) opt.selected = true;
       sel.appendChild(opt);
     }
-    fetchBusySeasonRecords();
+    return fetchBusySeasonRecords();
   }
 
   function fetchBusySeasonRecords() {
     var year = (document.getElementById('bs-year') || {}).value || '';
     console.log('[busySeason] 取得: 年度=' + year);
-    fetch(GAS_URL + '?action=getBusySeasonRecords&year=' + encodeURIComponent(year))
+    return fetch(GAS_URL + '?action=getBusySeasonRecords&year=' + encodeURIComponent(year))
       .then(function(res) { return res.json(); })
       .then(function(rows) {
         if (!Array.isArray(rows)) rows = [];
@@ -7509,7 +7511,7 @@
   }
 
   function initStressCheckPage() {
-    fetchStressCheckRecords();
+    return fetchStressCheckRecords();
   }
 
   // ===== 顧問料管理 =====
@@ -7533,13 +7535,13 @@
   // ページ初期化（navクリック時に呼ばれる）
   function initRetainerPage() {
     feeInitMonthInput();
-    fetchFeeMaster();
+    return fetchFeeMaster();
   }
 
   // ---------- 顧問料設定タブ ----------
 
   function fetchFeeMaster() {
-    fetch(GAS_URL + '?sheet=' + encodeURIComponent('顧問料設定'))
+    return fetch(GAS_URL + '?sheet=' + encodeURIComponent('顧問料設定'))
       .then(function(r) { return r.json(); })
       .then(function(rows) {
         _feeMasterRows = Array.isArray(rows) ? rows : [];
@@ -8439,8 +8441,7 @@
     document.getElementById('wa-panel-input').style.display    = '';
     document.getElementById('wa-panel-calendar').style.display = 'none';
     document.querySelectorAll('.wa-tab').forEach(function(t,i){ t.classList.toggle('active', i===0); });
-    loadAndRenderWaInput();
-    loadAndRenderWaCalendar();
+    return Promise.all([loadAndRenderWaInput(), loadAndRenderWaCalendar()]);
   }
 
   // 担当者を切り替えて入力・カレンダーの両方を再読み込みする
@@ -8514,7 +8515,7 @@
     var staffId = window._waStaffId;
     var tbody = document.getElementById('wa-input-tbody');
     if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#bbb;padding:16px;">読み込み中…</td></tr>';
-    loadWorkAvailability(staffId, window._waInputMonth).then(function(map) {
+    return loadWorkAvailability(staffId, window._waInputMonth).then(function(map) {
       renderWorkAvailabilityInput(staffId, window._waInputMonth, map);
     });
   }
@@ -8523,7 +8524,7 @@
     var staffId = window._waStaffId;
     var grid = document.getElementById('wa-calendar-grid');
     if (grid) grid.innerHTML = '<div style="text-align:center;color:#bbb;padding:24px;">読み込み中…</div>';
-    loadWorkAvailability(staffId, window._waCalMonth).then(function(map) {
+    return loadWorkAvailability(staffId, window._waCalMonth).then(function(map) {
       renderWorkAvailabilityCalendar(staffId, window._waCalMonth, map);
     });
   }
