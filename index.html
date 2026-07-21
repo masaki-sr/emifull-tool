@@ -5471,6 +5471,8 @@
 
     var editId = document.getElementById('consult-form-edit-id').value;
     var records = loadConsultations();
+    // 新規登録時も、画面側とスプレッドシート側で必ず同じIDを使う（後で編集できるようにするため）
+    var newId = editId ? parseInt(editId, 10) : Date.now();
 
     var workStart   = (document.getElementById('consult-work-start')   || {}).value || '';
     var workEnd     = (document.getElementById('consult-work-end')     || {}).value || '';
@@ -5484,7 +5486,7 @@
     }
 
     var entry = {
-      id:       editId ? parseInt(editId, 10) : (Math.max.apply(null, records.map(function(r){return r.id||0;}).concat([0])) + 1),
+      id:       newId,
       client:   clientEl.value,
       datetime: dtEl.value,
       contact:  (document.getElementById('consult-contact')  || {}).value || '',
@@ -5512,7 +5514,7 @@
       sheet: '相談記録',
       action: editId ? 'updateRow' : undefined,
       updateKey: editId ? 'ID' : undefined,
-      'ID':               editId ? String(entry.id) : String(Date.now()),
+      'ID':               String(newId),
       '登録日':           entry.datetime || nowJST,
       'クライアント名':   entry.client,
       '相談区分':         entry.category,
