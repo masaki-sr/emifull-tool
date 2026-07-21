@@ -2390,7 +2390,7 @@
     if (name === 'timesummary')    initTimeSummaryPage();
     if (name === 'payroll-record') { showGlobalLoading('給与計算記録を読み込み中…'); fetchPayrollRecordsFromSheet().then(function() { renderPayrollRecord(); }).then(hideGlobalLoading, hideGlobalLoading); }
     if (name === 'done')           { showGlobalLoading('完了一覧を読み込み中…'); fetchRecordsFromSheet().then(function() { renderDoneList(); }).then(hideGlobalLoading, hideGlobalLoading); }
-    if (name === 'consultation')   initConsultPage();
+    if (name === 'consultation')   { showGlobalLoading('相談記録を読み込み中…'); Promise.resolve(initConsultPage()).then(hideGlobalLoading, hideGlobalLoading); }
     if (name === 'inquiry')        { showGlobalLoading('行政問い合わせ記録を読み込み中…'); Promise.resolve(initInquiryPage()).then(hideGlobalLoading, hideGlobalLoading); }
     if (name === 'calendar')       initCalendarPage();
     if (name === 'busy-season')    { showGlobalLoading('算定年更管理を読み込み中…'); Promise.resolve(initBusySeasonPage()).then(hideGlobalLoading, hideGlobalLoading); }
@@ -2971,6 +2971,7 @@
     return Promise.allSettled([
       fetchTasksFromSheet(),
       fetchConsultTodosFromSheet(),
+      fetchConsultationsFromSheet(),
       fetchRecordsFromSheet(),
       fetchPayrollRecordsFromSheet(),
       fetchClientsFromSheet(),
@@ -2981,7 +2982,7 @@
       fetchQuickMessages()
     ]).then(function(results) {
       hideGlobalLoading();
-      var SHEET_NAMES = ['TODOシート', '相談記録TODO', '記録', '給与計算記録', 'クライアント', '行政問い合わせ記録', 'アクティビティ', '休日マスタ', '担当者状態', 'メッセージ'];
+      var SHEET_NAMES = ['TODOシート', '相談記録TODO', '相談記録', '記録', '給与計算記録', 'クライアント', '行政問い合わせ記録', 'アクティビティ', '休日マスタ', '担当者状態', 'メッセージ'];
       var failedInfo = results.map(function(r, i) { return r.status === 'rejected' ? SHEET_NAMES[i] : null; }).filter(Boolean);
       if (failedInfo.length > 0) {
         console.error('[refreshFromSheet] 取得失敗:', failedInfo);
@@ -5303,15 +5304,47 @@
     done:       { cls: 'status-terminated', label: '完了'     }
   };
 
-  function loadConsultations() {
-    try {
-      var all = JSON.parse(localStorage.getItem(CONSULT_KEY) || '[]');
-      return all.filter(function(r) { return !isTestData(r); });
-    } catch(e) { return []; }
+  var consultationsCache = [];
+
+  // 相談記録シートからの列名 → 内部プロパティ名マッピング
+  var CONSULT_SHEET_TO_PROP = {
+    'ID': 'id', '登録日': 'datetime', 'クライアント名': 'client',
+    '先方担当者': 'contact', '相談ツール': 'tool',
+    '相談区分': 'category', '相談内容': 'content', '対応内容': 'reply',
+    '担当者': 'assignee', 'ステータス': 'status', '期限': 'due', '備考': 'memo',
+    '開始時刻': 'workStart', '終了時刻': 'workEnd', '作業時間（分）': 'workMinutes',
+    '要対応フラグ': 'todoFlag'
+  };
+
+  function fetchConsultationsFromSheet() {
+    return fetch(GAS_URL + '?sheet=' + encodeURIComponent('相談記録'))
+      .then(function(res) { return res.json(); })
+      .then(function(rows) {
+        if (!Array.isArray(rows)) rows = [];
+        consultationsCache = rows.map(function(row) {
+          var r = {};
+          Object.keys(CONSULT_SHEET_TO_PROP).forEach(function(sheetKey) {
+            r[CONSULT_SHEET_TO_PROP[sheetKey]] = row[sheetKey] !== undefined ? row[sheetKey] : '';
+          });
+          r.id = Number(r.id) || r.id;
+          r.assignee = ASSIGNEE_NORMALIZE[r.assignee] || r.assignee || '';
+          r.todoFlag = (r.todoFlag === 'TRUE' || r.todoFlag === true);
+          if (!r.workMinutes) r.workMinutes = row['作業時間'] || '';
+          return r;
+        }).filter(function(r) { return !isTestData(r); });
+      })
+      .catch(function(e) {
+        console.error('[fetchConsultationsFromSheet] 取得失敗:', e);
+      });
   }
 
+  function loadConsultations() {
+    return consultationsCache;
+  }
+
+  // saveConsultations は互換性のため残す（キャッシュ更新のみ。実際の保存はsaveConsultation内のfetchで行う）
   function saveConsultations(data) {
-    localStorage.setItem(CONSULT_KEY, JSON.stringify(data));
+    consultationsCache = data;
   }
 
   function initConsultPage() {
@@ -5325,6 +5358,7 @@
       dt.value = todayJST();
     }
     renderConsultList();
+    return fetchConsultationsFromSheet().then(function() { renderConsultList(); });
   }
 
   function setConsultFilter(filter, tabEl) {
@@ -5517,6 +5551,8 @@
       'ID':               String(newId),
       '登録日':           entry.datetime || nowJST,
       'クライアント名':   entry.client,
+      '先方担当者':       entry.contact,
+      '相談ツール':       entry.tool,
       '相談区分':         entry.category,
       '相談内容':         entry.content,
       '対応内容':         entry.reply,
@@ -5616,11 +5652,23 @@
 
   function deleteConsultation(id) {
     if (!confirm('この相談記録を削除しますか？')) return;
-    saveConsultations(loadConsultations().filter(function(r) { return r.id !== id; }));
-    // 紐付きTODOも削除
-    saveTasks(loadTasks().filter(function(t) { return t.consultId !== id; }));
-    updateAllStats();
-    renderConsultList();
+    fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ sheet: '相談記録', action: 'deleteRow', deleteKey: 'ID', 'ID': String(id) })
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (result && result.error) throw new Error(result.error);
+        saveConsultations(loadConsultations().filter(function(r) { return r.id !== id; }));
+        // 紐付きTODOも削除
+        saveTasks(loadTasks().filter(function(t) { return t.consultId !== id; }));
+        updateAllStats();
+        renderConsultList();
+      })
+      .catch(function(e) {
+        alert('相談記録の削除に失敗しました: ' + e.message);
+      });
   }
 
   // 相談記録とTODOの同期
