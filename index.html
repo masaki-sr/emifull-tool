@@ -3867,26 +3867,28 @@
   // 成功時のみ true を返す。失敗時は false でTODOを消さない。
   function completeTodo(id, workTimeData) {
     var task = null;
-    loadTasks().forEach(function(t) { if (t.id === id) task = t; });
+    loadTasks().forEach(function(t) { if (String(t.id) === String(id)) task = t; });
     if (!task) {
-      console.error('[completeTodo] タスクID=' + id + ' が見つかりません');
-      return Promise.resolve(false);
+      // ローカルキャッシュにまだ無いだけ（作成直後の完了など）の可能性があるため、
+      // ここでは処理を中断せず、渡された作業時間データだけで完了処理を続行する。
+      console.warn('[completeTodo] タスクID=' + id + ' はローカルキャッシュに無いため、渡されたデータのみで完了処理を続行します');
     }
 
-    var categoryRaw = task.category || '';
+    var taskSafe = task || {};
+    var categoryRaw = taskSafe.category || '';
     var categoryTrimmed = String(categoryRaw).trim();
-    var isPayroll = isPayrollTask(task);
+    var isPayroll = isPayrollTask(taskSafe);
     var targetSheet = isPayroll ? '給与計算記録' : '記録';
 
     // ★デバッグ: 引数の生値を確認
     console.log('[completeTodo] ★workTimeData引数:', JSON.stringify(workTimeData));
-    console.log('[completeTodo] ★task.workStart=' + task.workStart + ', task.workEnd=' + task.workEnd + ', task.workMinutes=' + task.workMinutes);
+    console.log('[completeTodo] ★task.workStart=' + taskSafe.workStart + ', task.workEnd=' + taskSafe.workEnd + ', task.workMinutes=' + taskSafe.workMinutes);
 
     // 作業時間: 引数 > タスクオブジェクト の優先順
     var wt = workTimeData || {};
-    var workStart   = wt.workStart   || task.workStart   || '';
-    var workEnd     = wt.workEnd     || task.workEnd     || '';
-    var workMinutes = wt.workMinutes || task.workMinutes  || '';
+    var workStart   = wt.workStart   || taskSafe.workStart   || '';
+    var workEnd     = wt.workEnd     || taskSafe.workEnd     || '';
+    var workMinutes = wt.workMinutes || taskSafe.workMinutes || '';
 
     console.log('[completeTodo] ===== 完了処理開始 =====');
     console.log('[completeTodo] ID=' + id);
@@ -5219,17 +5221,45 @@
     };
 
     if (editId) {
-      // 編集（localStorageのみ更新 — 編集のスプレッドシート対応は次段階）
-      records = records.map(function(r) { return r.id === entry.id ? entry : r; });
-      inquiriesCache = records;
-      saveInquiries(records);
-      updateInquiryStat();
-      addActivity('inquiry_updated', actText(entry.client, (entry.org || '行政機関') + ' への問い合わせ記録', 'を更新'));
-      clearInquiryForm();
-      document.getElementById('inquiry-form-card').style.display = 'none';
-      var msg = document.getElementById('inquiry-save-msg');
-      if (msg) { msg.style.display = ''; setTimeout(function() { msg.style.display = 'none'; }, 3000); }
-      renderInquiryList();
+      // 編集 → スプレッドシートの既存行を更新
+      var statusJp = INQ_STATUS_CODE_TO_JP[entry.status] || entry.status || '対応中';
+      fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          sheet: '行政問い合わせ記録',
+          action: 'updateRow',
+          updateKey: 'inquiry_id',
+          'inquiry_id': String(editId),
+          '日付':       entry.date || '',
+          '機関':       entry.org || '',
+          'クライアント': entry.client || '',
+          '担当者':     entry.assignee || '',
+          '連絡先':     entry.contact || '',
+          '内容':       entry.content || '',
+          '回答':       entry.reply || '',
+          'ステータス': statusJp,
+          '期限':       entry.due || '',
+          'メモ':       entry.memo || ''
+        })
+      })
+        .then(function(res) { return res.json(); })
+        .then(function(result) {
+          if (!result || result.success !== true) throw new Error((result && result.error) || '不明なエラー');
+          addActivity('inquiry_updated', actText(entry.client, (entry.org || '行政機関') + ' への問い合わせ記録', 'を更新'));
+          clearInquiryForm();
+          document.getElementById('inquiry-form-card').style.display = 'none';
+          var msg = document.getElementById('inquiry-save-msg');
+          if (msg) { msg.style.display = ''; setTimeout(function() { msg.style.display = 'none'; }, 3000); }
+          return fetchInquiriesFromSheet();
+        })
+        .then(function() {
+          renderInquiryList();
+          updateInquiryStat();
+        })
+        .catch(function(e) {
+          alert('問い合わせ記録の更新に失敗しました: ' + e.message);
+        });
     } else {
       // 新規登録 → スプレッドシートに保存
       saveInquiryToSheet(entry)
@@ -5281,11 +5311,23 @@
 
   function deleteInquiry(id) {
     if (!confirm('この問い合わせ記録を削除しますか？')) return;
-    var remaining = loadInquiries().filter(function(r) { return r.id !== id; });
-    inquiriesCache = remaining;
-    saveInquiries(remaining);
-    updateInquiryStat();
-    renderInquiryList();
+    fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ sheet: '行政問い合わせ記録', action: 'deleteRow', deleteKey: 'inquiry_id', 'inquiry_id': String(id) })
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (result && result.error) throw new Error(result.error);
+        var remaining = loadInquiries().filter(function(r) { return r.id !== id; });
+        inquiriesCache = remaining;
+        saveInquiries(remaining);
+        updateInquiryStat();
+        renderInquiryList();
+      })
+      .catch(function(e) {
+        alert('問い合わせ記録の削除に失敗しました: ' + e.message);
+      });
   }
 
   // ===== 相談記録 =====
