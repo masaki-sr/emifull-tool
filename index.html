@@ -979,6 +979,10 @@
           </select>
           <input id="new-task-due" type="date" class="form-input"
             style="width:130px;padding:8px 6px;font-size:0.80rem;flex-shrink:0;" />
+          <input id="new-task-memo" type="text" class="form-input"
+            placeholder="メモ（任意）"
+            style="width:150px;padding:8px 10px;font-size:0.80rem;flex-shrink:0;"
+            onkeydown="if(event.key==='Enter')addTask()" />
           <button onclick="addTask()" class="btn btn-primary"
             style="padding:8px 12px;font-size:0.82rem;white-space:nowrap;flex-shrink:0;">追加</button>
         </div>
@@ -3372,9 +3376,14 @@
 
       // 担当者サブライン（表示名は ASSIGNEE_LABEL で変換）
       var assigneeLabel = ASSIGNEE_LABEL[task.assignee] || task.assignee || '';
-      var subHtml = assigneeLabel
-        ? '<div style="font-size:0.75rem;color:#6a8a6e;margin-top:2px;">担当：' + esc(assigneeLabel) + '</div>'
+      var memoExcerpt = (task.memo || '').replace(/\n/g, ' ').trim();
+      if (memoExcerpt.length > 24) memoExcerpt = memoExcerpt.slice(0, 24) + '…';
+      var memoHtml = memoExcerpt
+        ? '<span style="color:#bbb;margin:0 4px;">|</span><span style="color:#8a8a8a;" title="' + esc((task.memo || '').replace(/\n/g, ' ')) + '">' + esc(memoExcerpt) + '</span>'
         : '';
+      var subHtml = assigneeLabel
+        ? '<div style="font-size:0.75rem;color:#6a8a6e;margin-top:2px;">担当：' + esc(assigneeLabel) + memoHtml + '</div>'
+        : (memoExcerpt ? '<div style="font-size:0.75rem;color:#8a8a8a;margin-top:2px;">' + esc(memoExcerpt) + '</div>' : '');
 
       var assigneeColor = task.assignee === 'hamada' ? '#FF8A8A' : task.assignee === 'takasaki' ? '#6BCBFF' : task.assignee === 'kaikawa' ? '#B39DDB' : task.assignee === 'emifull' ? '#8FBF8F' : 'transparent';
       var assigneeDot = '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + assigneeColor + ';flex-shrink:0;margin-right:5px;margin-top:2px;' + (task.assignee ? '' : 'border:1px solid #ccc;') + '" title="' + esc(assigneeLabel || '未設定') + '"></span>';
@@ -3483,6 +3492,7 @@
     var assigneeEl = document.getElementById('new-task-assignee');
     var statusEl   = document.getElementById('new-task-status');
     var dueEl      = document.getElementById('new-task-due');
+    var memoEl     = document.getElementById('new-task-memo');
     if (!typeEl || !statusEl) return;
 
     var text = typeEl.value === 'その他'
@@ -3507,6 +3517,7 @@
       '担当者':       assigneeName,
       '状態':         statusJp,
       '優先度':       '',
+      'メモ':         memoEl ? memoEl.value.trim() : '',
       '作成日':       now,
       '更新日':       now
     };
@@ -3530,6 +3541,7 @@
       if (clientEl)   clientEl.value   = '';
       if (assigneeEl) assigneeEl.value = '';
       if (dueEl)      dueEl.value      = '';
+      if (memoEl)     memoEl.value     = '';
       typeEl.focus();
       return refreshFromSheet();
     })
