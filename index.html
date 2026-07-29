@@ -814,6 +814,14 @@
     社労士法人　えみふる
     <span>Labor Management Dashboard</span>
   </div>
+  <div style="padding:0 16px 14px;">
+    <label style="font-size:0.72rem;color:var(--text-sub);display:block;margin-bottom:4px;">あなたは：</label>
+    <select id="my-member-select" onchange="setMyMemberId(this.value)" style="width:100%;font-size:0.85rem;padding:5px 8px;border:1px solid #ccc;border-radius:6px;background:#fff;">
+      <option value="hamada">佐藤</option>
+      <option value="takasaki">笠田</option>
+      <option value="kaikawa">貝川</option>
+    </select>
+  </div>
   <nav>
     <div class="nav-item active" onclick="showPage('dashboard', this)">
       <span class="nav-icon">🏠</span>
@@ -3157,6 +3165,20 @@
       el.textContent = meta.emoji;
       el.title = meta.label;
     });
+  }
+
+  function setMyMemberId(id) {
+    localStorage.setItem('myMemberId', id);
+    try { renderMemberStatuses(); } catch(e) {}
+    try { renderQuickMessages(); } catch(e) {}
+    // 一言メッセージの宛先も、自分以外へ再設定
+    try {
+      var toEl = document.getElementById('msg-to');
+      if (toEl) {
+        var other = MEMBER_LIST.filter(function(m) { return m.id !== id; })[0];
+        toEl.value = other ? other.name : '佐藤';
+      }
+    } catch(e) {}
   }
 
   function onMyStatusChange(statusCode) {
@@ -8326,6 +8348,12 @@
     var emojis = ['🌸','🍑','🐖','🌵','🍀','🦄','🌿','🌱','🐝','🥀'];
     var emoji = emojis[Math.floor(Math.random() * emojis.length)];
     el.textContent = dateStr + '　' + msg + ' ' + emoji;
+  })();
+
+  // 「あなたは：」選択欄を、保存済みの選択（なければ佐藤）で初期化
+  (function() {
+    var sel = document.getElementById('my-member-select');
+    if (sel) sel.value = localStorage.getItem('myMemberId') || 'hamada';
   })();
 
   populateCategorySelects();   // new-task-type と rec-category を TASK_TYPES から構築
