@@ -1316,6 +1316,7 @@
               <option value="記録">記録</option>
               <option value="給与計算記録">給与計算記録</option>
               <option value="相談記録">相談記録</option>
+              <option value="TODO（対応中）">TODO（対応中）</option>
             </select>
           </div>
         </div>
@@ -1338,6 +1339,7 @@
               <th>担当者</th>
               <th>作業時間</th>
               <th>データ元</th>
+              <th></th>
             </tr>
           </thead>
           <tbody id="ts-tbody"></tbody>
@@ -6552,59 +6554,54 @@
   }
 
   // 記録シート＋給与計算記録シートを統合して時間集計用データを返す
+  // 記録・給与計算記録・相談記録・（未完了）TODOの作業時間を、共通フォーマットで1つにまとめる
+  // ※完了済みTODOは記録/給与計算記録へコピー済みのため、二重集計を避けるためここでは除外する
+  function buildAllTimeEntries() {
+    var records = loadRecords().map(function(t) {
+      return {
+        id: t.id, recordDate: t.recordDate || '', client: t.client || '',
+        category: t.category || '', text: t.text || '', assignee: t.assignee || '',
+        workStart: t.workStart || '', workEnd: t.workEnd || '',
+        workMinutes: parseInt(t.workMinutes, 10) || 0, source: '記録'
+      };
+    });
+    var payroll = loadPayrollRecords().map(function(t) {
+      return {
+        id: t.id, recordDate: t.recordDate || '', client: t.client || '',
+        category: t.category || '', text: t.text || '', assignee: t.assignee || '',
+        workStart: t.workStart || '', workEnd: t.workEnd || '',
+        workMinutes: parseInt(t.workMinutes, 10) || 0, source: '給与計算記録'
+      };
+    });
+    var consult = loadConsultations().map(function(t) {
+      return {
+        id: t.id, recordDate: t.datetime || '', client: t.client || '',
+        category: '相談記録', text: t.category || '', assignee: t.assignee || '',
+        workStart: t.workStart || '', workEnd: t.workEnd || '',
+        workMinutes: parseInt(t.workMinutes, 10) || 0, source: '相談記録'
+      };
+    });
+    // まだ完了していないTODO（対応中のまま作業時間だけ入力済みのもの）
+    var inProgress = loadRegularTasks().filter(function(t) {
+      return t.status !== '完了' && t.status !== 'done';
+    }).map(function(t) {
+      return {
+        id: t.id, recordDate: t.updatedAt || t.createdAt || '', client: t.client || '',
+        category: t.category || '', text: t.text || '', assignee: t.assignee || '',
+        workStart: t.workStart || '', workEnd: t.workEnd || '',
+        workMinutes: parseInt(t.workMinutes, 10) || 0, source: 'TODO（対応中）'
+      };
+    });
+    return records.concat(payroll).concat(consult).concat(inProgress);
+  }
+
   function getTimeSummaryRows() {
     var month    = (document.getElementById('ts-month')    || {}).value || '';
     var client   = (document.getElementById('ts-client')   || {}).value || '';
     var assignee = (document.getElementById('ts-assignee') || {}).value || '';
     var source   = (document.getElementById('ts-source')   || {}).value || '';
 
-    // 記録シートのデータを統合フォーマットに変換
-    var records = loadRecords().map(function(t) {
-      return {
-        recordDate:  t.recordDate  || '',
-        client:      t.client      || '',
-        category:    t.category    || '',
-        text:        t.text        || '',
-        assignee:    t.assignee    || '',
-        workStart:   t.workStart   || '',
-        workEnd:     t.workEnd     || '',
-        workMinutes: parseInt(t.workMinutes, 10) || 0,
-        source:      '記録'
-      };
-    });
-
-    // 給与計算記録シートのデータを統合フォーマットに変換
-    var payroll = loadPayrollRecords().map(function(t) {
-      return {
-        recordDate:  t.recordDate  || '',
-        client:      t.client      || '',
-        category:    t.category    || '',
-        text:        t.text        || '',
-        assignee:    t.assignee    || '',
-        workStart:   t.workStart   || '',
-        workEnd:     t.workEnd     || '',
-        workMinutes: parseInt(t.workMinutes, 10) || 0,
-        source:      '給与計算記録'
-      };
-    });
-
-    // 相談記録のデータを統合フォーマットに変換
-    var consult = loadConsultations().map(function(t) {
-      return {
-        recordDate:  t.datetime     || '',
-        client:      t.client       || '',
-        category:    '相談記録',
-        text:        t.category     || '',
-        assignee:    t.assignee     || '',
-        workStart:   t.workStart    || '',
-        workEnd:     t.workEnd      || '',
-        workMinutes: parseInt(t.workMinutes, 10) || 0,
-        source:      '相談記録'
-      };
-    });
-
-    // 結合してフィルタ
-    return records.concat(payroll).concat(consult).filter(function(t) {
+    return buildAllTimeEntries().filter(function(t) {
       if (!t.workMinutes || t.workMinutes <= 0) return false;
       if (month    && (t.recordDate || '').slice(0, 7) !== month) return false;
       if (client   && t.client !== client)                        return false;
@@ -6620,18 +6617,7 @@
     var rows = getTimeSummaryRows();
 
     // ===== 本日・今月の作業時間（フィルタ前の全データから算出） =====
-    var allData = (function() {
-      var records = loadRecords().map(function(t) {
-        return { recordDate: t.recordDate || '', workMinutes: parseInt(t.workMinutes, 10) || 0 };
-      });
-      var payroll = loadPayrollRecords().map(function(t) {
-        return { recordDate: t.recordDate || '', workMinutes: parseInt(t.workMinutes, 10) || 0 };
-      });
-      var consult = loadConsultations().map(function(t) {
-        return { recordDate: t.datetime || '', workMinutes: parseInt(t.workMinutes, 10) || 0 };
-      });
-      return records.concat(payroll).concat(consult);
-    })();
+    var allData = buildAllTimeEntries();
     var now = new Date();
     var todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
     var thisMonthStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
@@ -6706,7 +6692,7 @@
     var tbody = document.getElementById('ts-tbody');
     if (!tbody) return;
     if (rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#9e9e9e;padding:24px;">該当する作業時間記録がありません</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#9e9e9e;padding:24px;">該当する作業時間記録がありません</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(function(t) {
@@ -6716,7 +6702,19 @@
         ? '<span style="font-size:0.75rem;background:#fff3e0;color:#e65100;padding:1px 6px;border-radius:4px;">給与計算</span>'
         : t.source === '相談記録'
         ? '<span style="font-size:0.75rem;background:#ede7f6;color:#4527a0;padding:1px 6px;border-radius:4px;">相談記録</span>'
+        : t.source === 'TODO（対応中）'
+        ? '<span style="font-size:0.75rem;background:#e3f2fd;color:#1565c0;padding:1px 6px;border-radius:4px;">対応中</span>'
         : '<span style="font-size:0.75rem;background:#e8f5e9;color:#2e7d32;padding:1px 6px;border-radius:4px;">記録</span>';
+      var editBtn;
+      if (t.source === '記録') {
+        editBtn = '<button class="btn btn-secondary" style="font-size:0.76rem;padding:3px 10px;" onclick="openArchiveEditModal(\'' + esc(String(t.id)) + '\',\'record\')">編集</button>';
+      } else if (t.source === '給与計算記録') {
+        editBtn = '<button class="btn btn-secondary" style="font-size:0.76rem;padding:3px 10px;" onclick="openArchiveEditModal(\'' + esc(String(t.id)) + '\',\'payroll\')">編集</button>';
+      } else if (t.source === '相談記録') {
+        editBtn = '<button class="btn btn-secondary" style="font-size:0.76rem;padding:3px 10px;" onclick="showPageByName(\'consultation\');editConsultation(' + esc(String(t.id)) + ')">編集</button>';
+      } else {
+        editBtn = '<button class="btn btn-secondary" style="font-size:0.76rem;padding:3px 10px;" onclick="openTodoDetailFromCal(\'' + esc(String(t.id)) + '\')">編集</button>';
+      }
       return '<tr>' +
         '<td>' + esc(t.recordDate || '—') + '</td>' +
         '<td><strong>' + esc(t.client || '—') + '</strong></td>' +
@@ -6725,6 +6723,7 @@
         '<td>' + esc(asgn) + '</td>' +
         '<td style="white-space:nowrap;">' + (timeRange ? esc(timeRange) : '—') + '</td>' +
         '<td>' + srcLabel + '</td>' +
+        '<td>' + editBtn + '</td>' +
         '</tr>';
     }).join('');
   }
