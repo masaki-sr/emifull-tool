@@ -2665,7 +2665,7 @@
   //  ・同時実行数を GAS_MAX_CONCURRENT 件に制限（キュー方式）→ 何件呼んでも同時にGASを叩くのは最大2件
   //  ・HTTPステータスとContent-Typeを確認してからJSON.parse（HTMLエラーをJSONとして解釈しない）
   //  ・504/502/503・ネットワークエラー・JSON以外の応答は1回だけ短い待機後に再試行（控えめ）
-  var GAS_MAX_CONCURRENT = 2;
+  var GAS_MAX_CONCURRENT = 3;
   var _gasActive = 0;
   var _gasQueue = [];
 
@@ -6605,6 +6605,8 @@
       } else {
         editBtn = '<button class="btn btn-secondary" style="font-size:0.76rem;padding:3px 10px;" onclick="openTodoDetailFromCal(\'' + esc(String(t.id)) + '\')">編集</button>';
       }
+      var delBtn = '<button class="btn btn-secondary" style="font-size:0.76rem;padding:3px 10px;color:#c62828;border-color:#efcbcb;margin-left:4px;" ' +
+        'onclick="deleteTimeSummaryRow(\'' + esc(String(t.id)) + '\',\'' + esc(t.source) + '\')">削除</button>';
       return '<tr>' +
         '<td>' + esc(t.recordDate || '—') + '</td>' +
         '<td><strong>' + esc(t.client || '—') + '</strong></td>' +
@@ -6613,9 +6615,37 @@
         '<td>' + esc(asgn) + '</td>' +
         '<td style="white-space:nowrap;">' + (timeRange ? esc(timeRange) : '—') + '</td>' +
         '<td>' + srcLabel + '</td>' +
-        '<td>' + editBtn + '</td>' +
+        '<td style="white-space:nowrap;">' + editBtn + delBtn + '</td>' +
         '</tr>';
     }).join('');
+  }
+
+  // 時間集計の一覧から削除（データ元ごとに適切な削除処理へ振り分け）
+  function deleteTimeSummaryRow(id, source) {
+    if (source === '記録' || source === '給与計算記録') {
+      if (!confirm('この記録を削除しますか？\nこの操作は取り消せません。')) return;
+      postToGas({ sheet: source, action: 'deleteRow', deleteKey: 'ID', 'ID': String(id) })
+        .then(function() {
+          var fetchFn = source === '記録' ? fetchRecordsFromSheet : fetchPayrollRecordsFromSheet;
+          return fetchFn();
+        })
+        .then(function() {
+          renderTimeSummary();
+          if (source === '記録') { try { renderDoneList(); } catch(e) {} }
+          else { try { renderPayrollRecord(); } catch(e) {} }
+        })
+        .catch(function(e) {
+          alert('削除に失敗しました: ' + e.message);
+        });
+    } else if (source === '相談記録') {
+      deleteConsultation(id);
+      // 相談記録ページに切り替わっていないので、時間集計側も明示的に更新
+      setTimeout(function() { renderTimeSummary(); }, 300);
+    } else {
+      // TODO（対応中）
+      deleteTask(id);
+      setTimeout(function() { renderTimeSummary(); }, 300);
+    }
   }
 
   function exportTimeSummaryCSV() {
