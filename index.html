@@ -829,7 +829,7 @@
     </div>
     <div class="nav-item" onclick="showPage('record', this)">
       <span class="nav-icon">📝</span>
-      <span class="nav-label">記録追加</span>
+      <span class="nav-label">業務・手続記録</span>
     </div>
     <div class="nav-item" onclick="showPage('consultation', this)">
       <span class="nav-icon">💬</span>
@@ -1161,7 +1161,7 @@
   <!-- 記録追加 -->
   <div class="page" id="page-record">
     <div class="page-header">
-      <h1>記録追加</h1>
+      <h1>業務・手続記録</h1>
       <p>業務記録・手続き内容を入力します。保存するとTODOリストにも反映されます。</p>
     </div>
     <div class="card">
@@ -2665,7 +2665,7 @@
   //  ・同時実行数を GAS_MAX_CONCURRENT 件に制限（キュー方式）→ 何件呼んでも同時にGASを叩くのは最大2件
   //  ・HTTPステータスとContent-Typeを確認してからJSON.parse（HTMLエラーをJSONとして解釈しない）
   //  ・504/502/503・ネットワークエラー・JSON以外の応答は1回だけ短い待機後に再試行（控えめ）
-  var GAS_MAX_CONCURRENT = 3;
+  var GAS_MAX_CONCURRENT = 2;
   var _gasActive = 0;
   var _gasQueue = [];
 
@@ -3452,30 +3452,24 @@
   }
 
   function deleteTask(id) {
-    if (!confirm('本当に削除しますか？')) return;
+    if (!confirm('本当に削除しますか？')) return Promise.resolve(false);
     var task = loadTasks().filter(function(t) { return String(t.id) === String(id); })[0];
     if (task && task.source === 'consultation') {
       // 相談記録由来 → O列をFALSEに（TODO一覧から消す）
-      completeConsultTodo(task.consultId).then(function() {
+      return completeConsultTodo(task.consultId).then(function() {
         addActivity('consultation_updated', actText(task.client, '相談記録', 'のTODOを削除'));
         return refreshFromSheet();
       });
-      return;
     }
 
     // 通常TODO → スプレッドシートの該当行を実際に削除する
-    fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ sheet: 'TODO', action: 'deleteRow', deleteKey: 'ID', 'ID': id })
-    })
-      .then(function(res) { return res.json(); })
-      .then(function(result) {
-        if (result && result.error) throw new Error(result.error);
+    return postToGas({ sheet: 'TODO', action: 'deleteRow', deleteKey: 'ID', 'ID': id })
+      .then(function() {
         saveTasks(loadTasks().filter(function(t) { return String(t.id) !== String(id); }));
         renderTasks();
         updateAllStats();
         if (task) addActivity('todo_deleted', actText(task.client, task.text, ' を削除'));
+        return true;
       })
       .catch(function(e) {
         alert('削除に失敗しました: ' + e.message);
@@ -5585,20 +5579,15 @@
   }
 
   function deleteConsultation(id) {
-    if (!confirm('この相談記録を削除しますか？')) return;
-    fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ sheet: '相談記録', action: 'deleteRow', deleteKey: 'ID', 'ID': String(id) })
-    })
-      .then(function(res) { return res.json(); })
-      .then(function(result) {
-        if (result && result.error) throw new Error(result.error);
+    if (!confirm('この相談記録を削除しますか？')) return Promise.resolve(false);
+    return postToGas({ sheet: '相談記録', action: 'deleteRow', deleteKey: 'ID', 'ID': String(id) })
+      .then(function() {
         saveConsultations(loadConsultations().filter(function(r) { return r.id !== id; }));
         // 紐付きTODOも削除
         saveTasks(loadTasks().filter(function(t) { return t.consultId !== id; }));
         updateAllStats();
         renderConsultList();
+        return true;
       })
       .catch(function(e) {
         alert('相談記録の削除に失敗しました: ' + e.message);
@@ -6638,13 +6627,10 @@
           alert('削除に失敗しました: ' + e.message);
         });
     } else if (source === '相談記録') {
-      deleteConsultation(id);
-      // 相談記録ページに切り替わっていないので、時間集計側も明示的に更新
-      setTimeout(function() { renderTimeSummary(); }, 300);
+      deleteConsultation(id).then(function() { renderTimeSummary(); });
     } else {
       // TODO（対応中）
-      deleteTask(id);
-      setTimeout(function() { renderTimeSummary(); }, 300);
+      deleteTask(id).then(function() { renderTimeSummary(); });
     }
   }
 
