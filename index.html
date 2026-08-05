@@ -1787,7 +1787,7 @@
             <option value="届出済み・戻り待ち">届出済み・戻り待ち</option>
             <option value="戻り済み">戻り済み</option>
             <option value="SR依頼中">SR依頼中</option>
-            <option value="シャルフ入力済み・通知待ち">シャルフ入力済み・通知待ち</option>
+            <option value="ソフト入力済み・通知待ち">ソフト入力済み・通知待ち</option>
             <option value="返戻対応中">返戻対応中</option>
             <option value="保留">保留</option>
             <option value="完了">完了</option>
@@ -1799,7 +1799,7 @@
         </div>
       </div>
       <div class="form-actions" style="margin-top:20px;">
-        <button class="btn btn-primary" onclick="saveProcedure()">保存する</button>
+        <button class="btn btn-primary" id="procedure-save-btn" onclick="saveProcedure()">保存する</button>
         <button class="btn btn-secondary" onclick="clearProcedureForm()">クリア</button>
       </div>
     </div>
@@ -5241,7 +5241,7 @@
   function computeProcedureStage(p) {
     if (p.manualStatus) return { label: p.manualStatus, auto: false, cls: p.manualStatus === '完了' ? 'status-active' : 'status-prospect' };
     if (p.notifiedDate)   return { label: '完了',                     auto: true, cls: 'status-active' };
-    if (p.sharufuDate)    return { label: 'シャルフ入力済み・通知待ち', auto: true, cls: 'status-prospect' };
+    if (p.sharufuDate)    return { label: 'ソフト入力済み・通知待ち', auto: true, cls: 'status-prospect' };
     if (p.srReturnDate)   return { label: 'SR戻り済み',               auto: true, cls: 'status-prospect' };
     if (p.srRequestDate)  return { label: 'SR依頼中',                 auto: true, cls: 'status-prospect' };
     if (p.returnedDate)   return { label: '戻り済み',                 auto: true, cls: 'status-prospect' };
@@ -5445,6 +5445,10 @@
       postData['ID']     = editId;
     }
 
+    // 連打による重複登録を防ぐため、送信中はボタンを無効化する
+    var saveBtn = document.getElementById('procedure-save-btn');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
+
     postToGas(postData)
       .then(function() {
         addActivity(editId ? 'inquiry_updated' : 'inquiry_created',
@@ -5452,7 +5456,11 @@
         clearProcedureForm();
         document.getElementById('procedure-form-card').style.display = 'none';
         var msg = document.getElementById('procedure-save-msg');
-        if (msg) { msg.style.display = ''; setTimeout(function() { msg.style.display = 'none'; }, 3000); }
+        if (msg) {
+          msg.textContent = editId ? '更新しました。' : '登録しました。';
+          msg.style.display = '';
+          setTimeout(function() { msg.style.display = 'none'; }, 3000);
+        }
         return fetchProceduresFromSheet();
       })
       .then(function() {
@@ -5460,6 +5468,9 @@
       })
       .catch(function(e) {
         alert('手続きの保存に失敗しました: ' + e.message);
+      })
+      .then(function() {
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存する'; }
       });
   }
 
