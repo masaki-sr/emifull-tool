@@ -3806,7 +3806,11 @@
       });
     })
     .catch(function(e) {
-      alert('記録の保存に失敗しました: ' + e.message);
+      var looksTransient = /not valid JSON|Unexpected token/i.test(e.message || '');
+      var friendlyMsg = looksTransient
+        ? 'サーバーが混み合っていて保存できませんでした。少し時間をおいてから、もう一度保存してください。'
+        : e.message;
+      alert('記録の保存に失敗しました: ' + friendlyMsg);
     });
   }
 
@@ -3941,31 +3945,47 @@
 
     console.log('[completeTodo] ★fetch送信直前 postData:', JSON.stringify(postData));
 
-    return fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(postData)
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(result) {
-      console.log('[completeTodo] GASレスポンス:', JSON.stringify(result));
-      if (Array.isArray(result)) {
-        throw new Error('POSTがGETに変換されました。GASウェブアプリの再デプロイが必要です。');
-      }
-      if (result && result.error) {
-        throw new Error(result.error);
-      }
-      if (result && result.skipped) {
-        console.log('[completeTodo] 既に記録済（スキップ）');
-      }
-      console.log('[completeTodo] ===== 完了処理成功 ===== 保存先: ' + (result.savedTo || targetSheet));
-      return true;
-    })
-    .catch(function(e) {
-      console.error('[completeTodo] ===== 保存失敗 =====', e);
-      alert('完了処理に失敗しました: ' + e.message + '\nタスクはTODOに残します。');
-      return false;
-    });
+    function attempt(isRetry) {
+      return fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(postData)
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        console.log('[completeTodo] GASレスポンス:', JSON.stringify(result));
+        if (Array.isArray(result)) {
+          throw new Error('POSTがGETに変換されました。GASウェブアプリの再デプロイが必要です。');
+        }
+        if (result && result.error) {
+          throw new Error(result.error);
+        }
+        if (result && result.skipped) {
+          console.log('[completeTodo] 既に記録済（スキップ）');
+        }
+        console.log('[completeTodo] ===== 完了処理成功 ===== 保存先: ' + (result.savedTo || targetSheet));
+        return true;
+      })
+      .catch(function(e) {
+        console.error('[completeTodo] ===== 保存失敗' + (isRetry ? '（再試行後）' : '') + ' =====', e);
+        // 「有効なJSONではない」＝GAS側の一時的な混雑・クラッシュの可能性が高いため、
+        // 一度だけ少し待ってから自動的に再試行する
+        var looksTransient = /not valid JSON|Unexpected token/i.test(e.message || '');
+        if (!isRetry && looksTransient) {
+          console.log('[completeTodo] 一時的なエラーの可能性 → 1.5秒後に自動再試行します');
+          return new Promise(function(resolve) {
+            setTimeout(function() { resolve(attempt(true)); }, 1500);
+          });
+        }
+        var friendly = looksTransient
+          ? 'サーバーが混み合っていて完了処理ができませんでした。少し時間をおいてから、もう一度「完了」にしてください。'
+          : e.message;
+        alert('完了処理に失敗しました: ' + friendly + '\nタスクはTODOに残します。');
+        return false;
+      });
+    }
+
+    return attempt(false);
   }
 
   // 相談記録TODO完了（O列をFALSEに更新）
