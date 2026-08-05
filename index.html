@@ -312,7 +312,7 @@
     /* ダッシュボード右カラム下段サブグリッド */
     .dash-sub-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr auto;
+      grid-template-columns: 1fr 1fr;
       gap: 10px;
       align-items: start;
     }
@@ -814,14 +814,6 @@
     社労士法人　えみふる
     <span>Labor Management Dashboard</span>
   </div>
-  <div style="padding:0 16px 14px;">
-    <label style="font-size:0.72rem;color:var(--text-sub);display:block;margin-bottom:4px;">あなたは：</label>
-    <select id="my-member-select" onchange="setMyMemberId(this.value)" style="width:100%;font-size:0.85rem;padding:5px 8px;border:1px solid #ccc;border-radius:6px;background:#fff;">
-      <option value="hamada">佐藤</option>
-      <option value="takasaki">笠田</option>
-      <option value="kaikawa">貝川</option>
-    </select>
-  </div>
   <nav>
     <div class="nav-item active" onclick="showPage('dashboard', this)">
       <span class="nav-icon">🏠</span>
@@ -996,7 +988,7 @@
             <li style="padding:12px 0;color:#9e9e9e;font-size:0.86rem;text-align:center;">まだ操作履歴がありません</li>
           </ul>
         </div>
-        <!-- 下段: 本日の笠田 + 今日の予定 + 一言メッセージ -->
+        <!-- 下段: 本日の勤務予定 + 今日の予定 -->
         <div class="dash-sub-grid">
           <!-- 本日の笠田 -->
           <div onclick="showPageByName('work-avail')" class="busy-season-card" style="background:linear-gradient(135deg,#e8faf3 0%,#d0f0e4 100%);border-left-color:#52c78a;">
@@ -1011,24 +1003,6 @@
             <ul id="today-schedule-list" style="list-style:none;padding:0;margin:0;font-size:0.78rem;">
               <li style="color:#bbb;text-align:center;padding:4px 0;font-size:0.72rem;">読み込み中…</li>
             </ul>
-          </div>
-          <!-- 一言メッセージ -->
-          <div class="card" id="quick-msg-card" style="padding:10px 12px;">
-            <div class="section-title" style="margin-bottom:6px;font-size:0.78rem;">💬 一言メッセージ</div>
-            <div style="display:flex;gap:3px;margin-bottom:6px;align-items:center;">
-              <select id="msg-to" style="font-size:0.72rem;padding:2px 3px;border:1px solid #ccc;border-radius:4px;flex-shrink:0;">
-                <option value="佐藤">→佐藤</option>
-                <option value="笠田">→笠田</option>
-                <option value="貝川">→貝川</option>
-                <option value="えみふる">→えみふる（全員）</option>
-              </select>
-              <input id="msg-text" type="text" class="form-input" placeholder="メッセージを入力…"
-                style="flex:1;padding:3px 5px;font-size:0.74rem;" onkeydown="if(event.key==='Enter')sendQuickMsg()" />
-              <button onclick="sendQuickMsg()" class="btn btn-primary" style="padding:2px 7px;font-size:0.72rem;white-space:nowrap;flex-shrink:0;">送信</button>
-            </div>
-            <div id="msg-list">
-              <div style="color:#bbb;text-align:center;padding:4px 0;font-size:0.72rem;">メッセージなし</div>
-            </div>
           </div>
         </div>
       </div>
@@ -2818,7 +2792,7 @@
     '入社手続', '退職手続', '雇用保険', '社会保険',
     '扶養・各種給付', '育休・産育手続', '年金事務所対応',
     '労働保険', '労災対応', '算定基礎', '月変', '年度更新', '助成金',
-    '求人・採用支援', '就業規則', '相談対応', '行政対応', 'その他'
+    '求人・採用支援', '就業規則', '相談対応', '行政対応', 'セミナー研修', 'その他'
   ];
   // 記録カテゴリ（記録追加・編集フォームで使用、TASK_TYPESと共通）
   var RECORD_CATEGORIES = TASK_TYPES;
@@ -3032,11 +3006,10 @@
       fetchInquiriesFromSheet(),
       fetchActivityLog(),
       fetchHolidayMaster(),
-      fetchMemberStatuses(),
-      fetchQuickMessages()
+      fetchMemberStatuses()
     ]).then(function(results) {
       hideGlobalLoading();
-      var SHEET_NAMES = ['TODOシート', '相談記録TODO', '相談記録', '記録', '給与計算記録', 'クライアント', '行政問い合わせ記録', 'アクティビティ', '休日マスタ', '担当者状態', 'メッセージ'];
+      var SHEET_NAMES = ['TODOシート', '相談記録TODO', '相談記録', '記録', '給与計算記録', 'クライアント', '行政問い合わせ記録', 'アクティビティ', '休日マスタ', '担当者状態'];
       var failedInfo = results.map(function(r, i) { return r.status === 'rejected' ? SHEET_NAMES[i] : null; }).filter(Boolean);
       if (failedInfo.length > 0) {
         console.error('[refreshFromSheet] 取得失敗:', failedInfo);
@@ -3211,20 +3184,6 @@
     });
   }
 
-  function setMyMemberId(id) {
-    localStorage.setItem('myMemberId', id);
-    try { renderMemberStatuses(); } catch(e) {}
-    try { renderQuickMessages(); } catch(e) {}
-    // 一言メッセージの宛先も、自分以外へ再設定
-    try {
-      var toEl = document.getElementById('msg-to');
-      if (toEl) {
-        var other = MEMBER_LIST.filter(function(m) { return m.id !== id; })[0];
-        toEl.value = other ? other.name : '佐藤';
-      }
-    } catch(e) {}
-  }
-
   function onMyStatusChange(statusCode) {
     // 自分の担当者名（暫定固定: ログイン概念なし）
     var myId = localStorage.getItem('myMemberId') || 'hamada';
@@ -3241,101 +3200,6 @@
       body: JSON.stringify({ action: 'setMemberStatus', name: myName, status: statusCode })
     }).catch(function(e) {
       console.error('[setMemberStatus] 失敗:', e);
-    });
-  }
-
-  // --- 一言メッセージ ---
-  var quickMsgCache = [];
-
-  function fetchQuickMessages() {
-    return fetch(GAS_URL + '?action=getMessages')
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        console.log('[fetchQuickMessages] 取得データ:', JSON.stringify(data));
-        quickMsgCache = Array.isArray(data) ? data : [];
-        renderQuickMessages();
-        return quickMsgCache;
-      })
-      .catch(function(e) {
-        console.error('[fetchQuickMessages] 失敗:', e);
-      });
-  }
-
-  function renderQuickMessages() {
-    var el = document.getElementById('msg-list');
-    if (!el) return;
-    if (!quickMsgCache.length) {
-      el.innerHTML = '<div style="color:#bbb;text-align:center;padding:4px 0;font-size:0.72rem;">メッセージなし</div>';
-      return;
-    }
-    var myId = localStorage.getItem('myMemberId') || 'hamada';
-    var myName = '';
-    MEMBER_LIST.forEach(function(m) { if (m.id === myId) myName = m.name; });
-
-    var show = quickMsgCache.slice(0, 3);
-    var html = '';
-    show.forEach(function(msg) {
-      var isToMe = msg.to === myName;
-      var isMine = msg.from === myName;
-      var bg = isToMe ? '#FFF8E1' : 'transparent';
-      var delBtn = isMine ? " <span style=\"cursor:pointer;color:#bbb;font-size:0.68rem;\" title=\"削除\" onclick=\"deleteQuickMsg('" + msg.id + "')\">×</span>" : '';
-      html += '<div style="padding:4px 2px;border-bottom:1px solid #f0f0f0;background:' + bg + ';border-radius:2px;">';
-      html += '<div style="font-size:0.68rem;color:#999;">' + esc(msg.from) + '→' + esc(msg.to) + ' ' + (msg.ts || '').slice(5) + delBtn + '</div>';
-      html += '<div style="font-size:0.76rem;margin-top:1px;">' + esc(msg.text) + '</div>';
-      html += '</div>';
-    });
-    el.innerHTML = html;
-  }
-
-  function sendQuickMsg() {
-    var textEl = document.getElementById('msg-text');
-    var toEl = document.getElementById('msg-to');
-    var text = (textEl.value || '').trim();
-    if (!text) return;
-
-    var myId = localStorage.getItem('myMemberId') || 'hamada';
-    var myName = '';
-    MEMBER_LIST.forEach(function(m) { if (m.id === myId) myName = m.name; });
-    // フォールバック: MEMBER_LISTで見つからなければIDから直接変換
-    if (!myName) myName = myId === 'hamada' ? '佐藤' : '笠田';
-
-    var to = toEl.value;
-    var payload = { action: 'postMessage', text: text, from: myName, to: to };
-    console.log('[sendQuickMsg] 送信データ:', JSON.stringify(payload));
-    textEl.value = '';
-
-    fetch(GAS_URL, {
-      method: 'POST',
-      body: new URLSearchParams({ data: JSON.stringify(payload) })
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-      console.log('[sendQuickMsg] レスポンス:', JSON.stringify(data));
-      if (data.success) {
-        fetchQuickMessages();
-      } else {
-        console.error('[sendQuickMsg] 保存失敗:', data.error || '不明なエラー');
-      }
-    })
-    .catch(function(e) {
-      console.error('[sendQuickMsg] 通信エラー:', e);
-    });
-  }
-
-  function deleteQuickMsg(id) {
-    quickMsgCache = quickMsgCache.filter(function(m) { return String(m.id) !== String(id); });
-    renderQuickMessages();
-
-    fetch(GAS_URL, {
-      method: 'POST',
-      body: new URLSearchParams({ data: JSON.stringify({ action: 'deleteMessage', id: id }) })
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-      if (data.success) fetchQuickMessages();
-    })
-    .catch(function(e) {
-      console.error('[deleteQuickMsg] 失敗:', e);
     });
   }
 
@@ -8354,12 +8218,6 @@
     el.textContent = dateStr + '　' + msg + ' ' + emoji;
   })();
 
-  // 「あなたは：」選択欄を、保存済みの選択（なければ佐藤）で初期化
-  (function() {
-    var sel = document.getElementById('my-member-select');
-    if (sel) sel.value = localStorage.getItem('myMemberId') || 'hamada';
-  })();
-
   populateCategorySelects();   // new-task-type と rec-category を TASK_TYPES から構築
   updateFilterButtons();
   updateClientStat();
@@ -8446,8 +8304,19 @@
         return Promise.resolve().then(job.fn).then(function() {
           clearInitFailure(job.name);
         }, function(e) {
-          console.error('[遅延読込] ' + job.name + ' 失敗:', e);
-          if (job.name !== '休日マスタ') markInitFailure(job.name, job.fn); // 祝日は警告に出さない
+          console.warn('[遅延読込] ' + job.name + ' 失敗 → 2秒後に自動再試行:', e);
+          return new Promise(function(resolve) {
+            setTimeout(function() {
+              Promise.resolve().then(job.fn).then(function() {
+                clearInitFailure(job.name);
+                resolve();
+              }, function(e2) {
+                console.error('[遅延読込] ' + job.name + ' 再試行後も失敗:', e2);
+                if (job.name !== '休日マスタ') markInitFailure(job.name, job.fn); // 祝日は警告に出さない
+                resolve();
+              });
+            }, 2000);
+          });
         });
       });
     }, Promise.resolve());
@@ -8496,15 +8365,6 @@
       .then(function() {
         // 本日の勤務予定（必須。失敗しても継続）
         try { loadTodayWorkAvail(); } catch(e) { console.error('[初期化] loadTodayWorkAvail エラー:', e); }
-        // 一言メッセージ: 宛先を自分以外にデフォルト設定
-        try {
-          var myId = localStorage.getItem('myMemberId') || 'hamada';
-          var toEl = document.getElementById('msg-to');
-          if (toEl) {
-            var other = MEMBER_LIST.filter(function(m) { return m.id !== myId; })[0];
-            toEl.value = other ? other.name : '佐藤';
-          }
-        } catch(e) {}
         // ② 初期表示が済んだら、残りを順番に遅延読み込み
         hideGlobalLoading();
         runDeferredInitLoads();
