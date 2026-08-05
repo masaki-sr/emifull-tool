@@ -839,6 +839,10 @@
       <span class="nav-icon">📞</span>
       <span class="nav-label">行政問い合わせ記録</span>
     </div>
+    <div class="nav-item" onclick="showPage('procedure', this)">
+      <span class="nav-icon">📑</span>
+      <span class="nav-label">手続き受付簿</span>
+    </div>
     <div class="nav-item" onclick="showPage('timesummary', this)">
       <span class="nav-icon">⏱️</span>
       <span class="nav-label">時間集計</span>
@@ -1655,6 +1659,195 @@
     </div>
   </div>
 
+  <!-- 手続き受付簿 -->
+  <div class="page" id="page-procedure">
+    <div class="page-header">
+      <h1>手続き受付簿</h1>
+      <p>社会保険・雇用保険などの手続きを、受託から事業所通知まで段階ごとに管理します</p>
+    </div>
+
+    <!-- 新規登録フォーム -->
+    <div class="card" id="procedure-form-card" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <div class="section-title" style="margin-bottom:0;" id="procedure-form-title">新規手続き登録</div>
+        <button class="btn btn-secondary" style="font-size:0.8rem;padding:5px 14px;" onclick="toggleProcedureForm()">閉じる</button>
+      </div>
+      <div id="procedure-save-msg" style="display:none;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:10px 16px;margin-bottom:16px;color:#2e7d32;font-size:0.88rem;font-weight:600;">
+        保存しました。
+      </div>
+      <input type="hidden" id="procedure-form-edit-id" />
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">受託日 <span style="color:#c62828;">*</span></label>
+          <input type="date" id="procedure-received-date" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">事業所名 <span style="color:#c62828;">*</span></label>
+          <select id="procedure-client" class="form-select">
+            <option value="">クライアントを選択してください</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">氏名（任意）</label>
+          <input type="text" id="procedure-person" class="form-input" placeholder="例：山田 太郎／全10名 など" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">種別</label>
+          <select id="procedure-category" class="form-select">
+            <option value="">—</option>
+            <option value="社">社（社会保険）</option>
+            <option value="雇">雇（雇用保険）</option>
+            <option value="労">労（労働保険）</option>
+            <option value="健">健（健康保険）</option>
+            <option value="国">国（国民年金）</option>
+            <option value="監">監（労基署）</option>
+            <option value="他">他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">手続き名 <span style="color:#c62828;">*</span></label>
+          <input type="text" id="procedure-name" class="form-input" list="procedure-name-list" placeholder="例：資格取得届" />
+          <datalist id="procedure-name-list">
+            <option value="資格取得届"></option>
+            <option value="資格喪失届"></option>
+            <option value="被扶養者異動届"></option>
+            <option value="賞与支払届"></option>
+            <option value="算定基礎届"></option>
+            <option value="月額変更届"></option>
+            <option value="育児時短就業給付"></option>
+            <option value="育休取得者申出書"></option>
+            <option value="育休終了届"></option>
+            <option value="離職票"></option>
+            <option value="傷病手当金申請書"></option>
+            <option value="事業所関係変更届"></option>
+            <option value="就業規則変更届"></option>
+            <option value="36協定"></option>
+          </datalist>
+        </div>
+        <div class="form-group">
+          <label class="form-label">担当者</label>
+          <select id="procedure-assignee" class="form-select">
+            <option value="">未設定</option>
+            <option value="hamada">佐藤</option>
+            <option value="takasaki">笠田</option>
+            <option value="kaikawa">貝川</option>
+            <option value="emifull">えみふる</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">MN預かり日（任意）</label>
+          <input type="date" id="procedure-mn-date" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">本人確認方法（任意）</label>
+          <input type="text" id="procedure-idcheck" class="form-input" placeholder="例：マイナンバーカード" />
+        </div>
+        <div class="form-group" style="grid-column:1/-1;margin-top:6px;">
+          <div style="font-size:0.78rem;font-weight:700;color:#5a7a5e;letter-spacing:0.04em;border-bottom:1px solid #e4ece4;padding-bottom:4px;">進捗（日付が入るごとに段階が進みます）</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">届出日</label>
+          <input type="date" id="procedure-submitted-date" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">戻り日</label>
+          <input type="date" id="procedure-returned-date" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">SR依頼日</label>
+          <input type="date" id="procedure-sr-request-date" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">SR戻り日</label>
+          <input type="date" id="procedure-sr-return-date" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">シャルフ情報入力日</label>
+          <input type="date" id="procedure-sharufu-date" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">事業所通知日</label>
+          <input type="date" id="procedure-notified-date" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">通知方法（任意）</label>
+          <select id="procedure-notify-method" class="form-select">
+            <option value="">—</option>
+            <option value="メール">メール</option>
+            <option value="手渡し">手渡し</option>
+            <option value="郵送">郵送</option>
+            <option value="紙・直接">紙・直接</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">進捗の手動指定（任意）</label>
+          <select id="procedure-manual-status" class="form-select">
+            <option value="">（自動判定にまかせる）</option>
+            <option value="受託・未着手">受託・未着手</option>
+            <option value="届出済み・戻り待ち">届出済み・戻り待ち</option>
+            <option value="戻り済み">戻り済み</option>
+            <option value="SR依頼中">SR依頼中</option>
+            <option value="シャルフ入力済み・通知待ち">シャルフ入力済み・通知待ち</option>
+            <option value="返戻対応中">返戻対応中</option>
+            <option value="保留">保留</option>
+            <option value="完了">完了</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">備考（任意）</label>
+          <textarea id="procedure-memo" class="form-textarea" placeholder="返戻理由や補足事項があれば入力してください…"></textarea>
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top:20px;">
+        <button class="btn btn-primary" onclick="saveProcedure()">保存する</button>
+        <button class="btn btn-secondary" onclick="clearProcedureForm()">クリア</button>
+      </div>
+    </div>
+
+    <!-- タブ・ボタン -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+      <div class="tabs" id="procedure-tabs" style="margin-bottom:0;">
+        <div class="tab active" onclick="setProcedureFilter('all', this)">すべて</div>
+        <div class="tab" onclick="setProcedureFilter('inprogress', this)">進行中</div>
+        <div class="tab" onclick="setProcedureFilter('stuck', this)">停滞中</div>
+        <div class="tab" onclick="setProcedureFilter('done', this)">完了</div>
+      </div>
+      <button class="btn btn-primary" onclick="openNewProcedureForm()">＋ 新規手続き</button>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <select id="procedure-client-filter" class="form-select" style="width:200px;" onchange="renderProcedureList()">
+        <option value="">事業所名：すべて</option>
+      </select>
+      <select id="procedure-assignee-filter" class="form-select" style="width:140px;" onchange="renderProcedureList()">
+        <option value="">担当者：すべて</option>
+        <option value="hamada">佐藤</option>
+        <option value="takasaki">笠田</option>
+        <option value="kaikawa">貝川</option>
+        <option value="emifull">えみふる</option>
+      </select>
+    </div>
+
+    <!-- 一覧 -->
+    <div class="client-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>事業所名</th>
+            <th>氏名</th>
+            <th>種別</th>
+            <th>手続き名</th>
+            <th>担当者</th>
+            <th>進捗</th>
+            <th>経過</th>
+            <th>備考</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="procedure-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- 相談記録 -->
   <div class="page" id="page-consultation">
     <div class="page-header">
@@ -2380,6 +2573,7 @@
     if (name === 'done')           { showGlobalLoading('完了一覧を読み込み中…'); fetchRecordsFromSheet().then(function() { renderDoneList(); }).then(hideGlobalLoading, hideGlobalLoading); }
     if (name === 'consultation')   { showGlobalLoading('相談記録を読み込み中…'); Promise.resolve(initConsultPage()).then(hideGlobalLoading, hideGlobalLoading); }
     if (name === 'inquiry')        { showGlobalLoading('行政問い合わせ記録を読み込み中…'); Promise.resolve(initInquiryPage()).then(hideGlobalLoading, hideGlobalLoading); }
+    if (name === 'procedure')      { showGlobalLoading('手続き受付簿を読み込み中…'); Promise.resolve(initProcedurePage()).then(hideGlobalLoading, hideGlobalLoading); }
     if (name === 'calendar')       initCalendarPage();
     if (name === 'busy-season')    { showGlobalLoading('算定年更管理を読み込み中…'); Promise.resolve(initBusySeasonPage()).then(hideGlobalLoading, hideGlobalLoading); }
     if (name === 'stress-check')   { showGlobalLoading('ストレスチェック管理を読み込み中…'); try { Promise.resolve(initStressCheckPage()).then(hideGlobalLoading, hideGlobalLoading); } catch(e) { console.error('[stress-check] 初期化エラー:', e); hideGlobalLoading(); } }
@@ -5006,6 +5200,290 @@
         clearInitFailure('行政問い合わせ記録');
       })
       .catch(function(e) { console.error('[inquiry] 取得失敗:', e); });
+  }
+
+  // ===== 手続き受付簿 =====
+  var proceduresCache = [];
+  var procedureFilter = 'all';
+  var PROCEDURE_STUCK_DAYS = 14; // この日数以上、次の段階に進んでいなければ「停滞中」扱い
+
+  var PROCEDURE_SHEET_TO_PROP = {
+    'ID': 'id', '受託日': 'receivedDate', '事業所名': 'client', '氏名': 'personName',
+    '種別': 'category', '手続き名': 'procedureName', 'MN預かり日': 'mnDate',
+    '本人確認方法': 'idCheckMethod', '届出日': 'submittedDate', '戻り日': 'returnedDate',
+    'SR依頼日': 'srRequestDate', 'SR戻り日': 'srReturnDate',
+    'シャルフ情報入力日': 'sharufuDate', '事業所通知日': 'notifiedDate',
+    '通知方法': 'notifyMethod', '担当者': 'assignee', '手動ステータス': 'manualStatus', '備考': 'memo'
+  };
+
+  function fetchProceduresFromSheet() {
+    return fetch(GAS_URL + '?sheet=' + encodeURIComponent('手続き受付簿'))
+      .then(function(res) { return res.json(); })
+      .then(function(rows) {
+        if (!Array.isArray(rows)) rows = [];
+        proceduresCache = rows.map(function(row) {
+          var p = {};
+          Object.keys(PROCEDURE_SHEET_TO_PROP).forEach(function(sheetKey) {
+            p[PROCEDURE_SHEET_TO_PROP[sheetKey]] = row[sheetKey] !== undefined ? String(row[sheetKey]) : '';
+          });
+          p.assignee = ASSIGNEE_NORMALIZE[p.assignee] || p.assignee || '';
+          return p;
+        });
+      })
+      .catch(function(e) {
+        console.error('[fetchProceduresFromSheet] 取得失敗:', e);
+      });
+  }
+
+  function loadProcedures() { return proceduresCache; }
+
+  // 進捗を自動判定（日付欄が埋まっているかで判断）。手動ステータスがあればそちらを優先。
+  function computeProcedureStage(p) {
+    if (p.manualStatus) return { label: p.manualStatus, auto: false, cls: p.manualStatus === '完了' ? 'status-active' : 'status-prospect' };
+    if (p.notifiedDate)   return { label: '完了',                     auto: true, cls: 'status-active' };
+    if (p.sharufuDate)    return { label: 'シャルフ入力済み・通知待ち', auto: true, cls: 'status-prospect' };
+    if (p.srReturnDate)   return { label: 'SR戻り済み',               auto: true, cls: 'status-prospect' };
+    if (p.srRequestDate)  return { label: 'SR依頼中',                 auto: true, cls: 'status-prospect' };
+    if (p.returnedDate)   return { label: '戻り済み',                 auto: true, cls: 'status-prospect' };
+    if (p.submittedDate)  return { label: '届出済み・戻り待ち',        auto: true, cls: 'status-prospect' };
+    if (p.receivedDate)   return { label: '受託・未着手',              auto: true, cls: 'status-spot' };
+    return { label: '未受託', auto: true, cls: 'status-terminated' };
+  }
+
+  // 最後に埋まった日付からの経過日数（何日進捗がないか）
+  function computeProcedureElapsedDays(p) {
+    var dates = [p.notifiedDate, p.sharufuDate, p.srReturnDate, p.srRequestDate,
+                 p.returnedDate, p.submittedDate, p.receivedDate].filter(Boolean);
+    if (!dates.length) return null;
+    var latestStr = dates.slice().sort().slice(-1)[0];
+    var latest = new Date(latestStr);
+    if (isNaN(latest.getTime())) return null;
+    var today = new Date(todayJST());
+    return Math.floor((today - latest) / 86400000);
+  }
+
+  function isProcedureStuck(p, stage, elapsedDays) {
+    if (stage.label === '完了') return false;
+    if (p.manualStatus === '返戻対応中') return true;
+    return elapsedDays !== null && elapsedDays >= PROCEDURE_STUCK_DAYS;
+  }
+
+  function setProcedureFilter(filter, tabEl) {
+    procedureFilter = filter;
+    document.querySelectorAll('#procedure-tabs .tab').forEach(function(t) { t.classList.remove('active'); });
+    if (tabEl) tabEl.classList.add('active');
+    renderProcedureList();
+  }
+
+  function rebuildProcedureClientFilter() {
+    var sel = document.getElementById('procedure-client-filter');
+    if (!sel) return;
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">事業所名：すべて</option>';
+    var names = {};
+    loadProcedures().forEach(function(p) { if (p.client) names[p.client] = true; });
+    Object.keys(names).sort().forEach(function(name) {
+      var opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      if (name === cur) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  function renderProcedureList() {
+    rebuildProcedureClientFilter();
+    var tbody = document.getElementById('procedure-tbody');
+    if (!tbody) return;
+    var clientFilter   = (document.getElementById('procedure-client-filter')   || {}).value || '';
+    var assigneeFilter = (document.getElementById('procedure-assignee-filter') || {}).value || '';
+
+    var rows = loadProcedures().map(function(p) {
+      var stage = computeProcedureStage(p);
+      var elapsed = computeProcedureElapsedDays(p);
+      var stuck = isProcedureStuck(p, stage, elapsed);
+      return { p: p, stage: stage, elapsed: elapsed, stuck: stuck };
+    }).filter(function(r) {
+      if (clientFilter && r.p.client !== clientFilter) return false;
+      if (assigneeFilter && r.p.assignee !== assigneeFilter) return false;
+      if (procedureFilter === 'done' && r.stage.label !== '完了') return false;
+      if (procedureFilter === 'inprogress' && r.stage.label === '完了') return false;
+      if (procedureFilter === 'stuck' && !r.stuck) return false;
+      return true;
+    }).sort(function(a, b) {
+      return (b.p.receivedDate || '') < (a.p.receivedDate || '') ? -1 : 1;
+    });
+
+    if (rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#9e9e9e;padding:24px;">該当する手続きがありません</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = rows.map(function(r) {
+      var p = r.p;
+      var asgn = ASSIGNEE_LABEL[p.assignee] || p.assignee || '—';
+      var stageBadge = '<span class="status-badge ' + r.stage.cls + '">' + esc(r.stage.label) + '</span>' +
+        (r.stage.auto ? '' : ' <span style="font-size:0.68rem;color:#9e9e9e;">(手動)</span>');
+      var elapsedHtml = r.elapsed === null
+        ? '—'
+        : '<span style="' + (r.stuck ? 'color:#c62828;font-weight:700;' : 'color:#5a7a5e;') + '">' + r.elapsed + '日' + (r.stuck ? ' ⚠' : '') + '</span>';
+      return '<tr>' +
+        '<td><strong>' + esc(p.client || '—') + '</strong></td>' +
+        '<td>' + esc(p.personName || '—') + '</td>' +
+        '<td>' + esc(p.category || '—') + '</td>' +
+        '<td>' + esc(p.procedureName || '—') + '</td>' +
+        '<td>' + esc(asgn) + '</td>' +
+        '<td>' + stageBadge + '</td>' +
+        '<td style="white-space:nowrap;">' + elapsedHtml + '</td>' +
+        '<td style="max-width:180px;white-space:normal;font-size:0.8rem;color:#7a7a7a;">' + esc(p.memo || '') + '</td>' +
+        '<td style="white-space:nowrap;">' +
+          '<button class="btn btn-secondary" style="font-size:0.76rem;padding:3px 10px;" onclick="editProcedure(\'' + esc(String(p.id)) + '\')">編集</button> ' +
+          '<button class="btn btn-secondary" style="font-size:0.76rem;padding:3px 10px;color:#c62828;border-color:#efcbcb;" onclick="deleteProcedure(\'' + esc(String(p.id)) + '\')">削除</button>' +
+        '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function openNewProcedureForm() {
+    clearProcedureForm();
+    document.getElementById('procedure-form-title').textContent = '新規手続き登録';
+    document.getElementById('procedure-form-card').style.display = '';
+    document.getElementById('procedure-form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function toggleProcedureForm() {
+    var card = document.getElementById('procedure-form-card');
+    if (card) card.style.display = (card.style.display === 'none') ? '' : 'none';
+  }
+
+  function clearProcedureForm() {
+    document.getElementById('procedure-form-edit-id').value = '';
+    ['procedure-person', 'procedure-idcheck', 'procedure-memo'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.value = '';
+    });
+    ['procedure-received-date', 'procedure-mn-date', 'procedure-submitted-date', 'procedure-returned-date',
+     'procedure-sr-request-date', 'procedure-sr-return-date', 'procedure-sharufu-date', 'procedure-notified-date'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.value = '';
+    });
+    ['procedure-client', 'procedure-category', 'procedure-name', 'procedure-assignee',
+     'procedure-notify-method', 'procedure-manual-status'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.value = '';
+    });
+    var receivedEl = document.getElementById('procedure-received-date');
+    if (receivedEl) receivedEl.value = todayJST();
+  }
+
+  function editProcedure(id) {
+    var p = loadProcedures().filter(function(x) { return String(x.id) === String(id); })[0];
+    if (!p) return;
+    document.getElementById('procedure-form-edit-id').value = p.id;
+    document.getElementById('procedure-form-title').textContent = '手続きの編集';
+    document.getElementById('procedure-received-date').value    = p.receivedDate || '';
+    document.getElementById('procedure-client').value           = p.client || '';
+    document.getElementById('procedure-person').value           = p.personName || '';
+    document.getElementById('procedure-category').value         = p.category || '';
+    document.getElementById('procedure-name').value              = p.procedureName || '';
+    document.getElementById('procedure-assignee').value         = p.assignee || '';
+    document.getElementById('procedure-mn-date').value           = p.mnDate || '';
+    document.getElementById('procedure-idcheck').value           = p.idCheckMethod || '';
+    document.getElementById('procedure-submitted-date').value   = p.submittedDate || '';
+    document.getElementById('procedure-returned-date').value    = p.returnedDate || '';
+    document.getElementById('procedure-sr-request-date').value  = p.srRequestDate || '';
+    document.getElementById('procedure-sr-return-date').value   = p.srReturnDate || '';
+    document.getElementById('procedure-sharufu-date').value     = p.sharufuDate || '';
+    document.getElementById('procedure-notified-date').value    = p.notifiedDate || '';
+    document.getElementById('procedure-notify-method').value    = p.notifyMethod || '';
+    document.getElementById('procedure-manual-status').value    = p.manualStatus || '';
+    document.getElementById('procedure-memo').value              = p.memo || '';
+    document.getElementById('procedure-form-card').style.display = '';
+    document.getElementById('procedure-form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function saveProcedure() {
+    var receivedEl = document.getElementById('procedure-received-date');
+    var clientEl   = document.getElementById('procedure-client');
+    var nameEl     = document.getElementById('procedure-name');
+
+    var invalid = false;
+    [receivedEl, clientEl, nameEl].forEach(function(el) {
+      if (!el || !el.value.trim()) { if (el) el.style.borderColor = '#c62828'; invalid = true; }
+      else if (el) el.style.borderColor = '';
+    });
+    if (invalid) return;
+
+    var editId = document.getElementById('procedure-form-edit-id').value;
+    var assigneeVal = document.getElementById('procedure-assignee').value;
+    var assigneeName = ASSIGNEE_LABEL[assigneeVal] || assigneeVal || '';
+
+    var postData = {
+      sheet: '手続き受付簿',
+      '受託日':             receivedEl.value,
+      '事業所名':           clientEl.value,
+      '氏名':               (document.getElementById('procedure-person')   || {}).value || '',
+      '種別':               (document.getElementById('procedure-category') || {}).value || '',
+      '手続き名':           nameEl.value,
+      'MN預かり日':         (document.getElementById('procedure-mn-date')  || {}).value || '',
+      '本人確認方法':       (document.getElementById('procedure-idcheck')  || {}).value || '',
+      '届出日':             (document.getElementById('procedure-submitted-date')  || {}).value || '',
+      '戻り日':             (document.getElementById('procedure-returned-date')   || {}).value || '',
+      'SR依頼日':           (document.getElementById('procedure-sr-request-date') || {}).value || '',
+      'SR戻り日':           (document.getElementById('procedure-sr-return-date')  || {}).value || '',
+      'シャルフ情報入力日': (document.getElementById('procedure-sharufu-date')    || {}).value || '',
+      '事業所通知日':       (document.getElementById('procedure-notified-date')   || {}).value || '',
+      '通知方法':           (document.getElementById('procedure-notify-method')   || {}).value || '',
+      '担当者':             assigneeName,
+      '手動ステータス':     (document.getElementById('procedure-manual-status')   || {}).value || '',
+      '備考':               (document.getElementById('procedure-memo') || {}).value || ''
+    };
+    if (editId) {
+      postData.action    = 'updateRow';
+      postData.updateKey = 'ID';
+      postData['ID']     = editId;
+    }
+
+    postToGas(postData)
+      .then(function() {
+        addActivity(editId ? 'inquiry_updated' : 'inquiry_created',
+          actText(clientEl.value, (nameEl.value || '手続き'), 'を' + (editId ? '更新' : '登録')));
+        clearProcedureForm();
+        document.getElementById('procedure-form-card').style.display = 'none';
+        var msg = document.getElementById('procedure-save-msg');
+        if (msg) { msg.style.display = ''; setTimeout(function() { msg.style.display = 'none'; }, 3000); }
+        return fetchProceduresFromSheet();
+      })
+      .then(function() {
+        renderProcedureList();
+      })
+      .catch(function(e) {
+        alert('手続きの保存に失敗しました: ' + e.message);
+      });
+  }
+
+  function deleteProcedure(id) {
+    if (!confirm('この手続きを削除しますか？\nこの操作は取り消せません。')) return;
+    postToGas({ sheet: '手続き受付簿', action: 'deleteRow', deleteKey: 'ID', 'ID': String(id) })
+      .then(function() { return fetchProceduresFromSheet(); })
+      .then(function() { renderProcedureList(); })
+      .catch(function(e) {
+        alert('削除に失敗しました: ' + e.message);
+      });
+  }
+
+  function initProcedurePage() {
+    rebuildTaskClientSelect();
+    var clientSel = document.getElementById('procedure-client');
+    if (clientSel) {
+      // 記録追加等と違い、見込み・契約中どちらのクライアントも選べるようにする
+      var cur = clientSel.value;
+      clientSel.innerHTML = '<option value="">クライアントを選択してください</option>';
+      loadClients().forEach(function(c) {
+        var opt = document.createElement('option');
+        opt.value = c.name; opt.textContent = c.name;
+        if (c.name === cur) opt.selected = true;
+        clientSel.appendChild(opt);
+      });
+    }
+    renderProcedureList();
+    return fetchProceduresFromSheet().then(function() { renderProcedureList(); });
   }
 
   function setInquiryFilter(filter, tabEl) {
