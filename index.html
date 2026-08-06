@@ -1837,6 +1837,7 @@
             <th>種別</th>
             <th>手続き名</th>
             <th>担当者</th>
+            <th>進捗状況</th>
             <th>進捗</th>
             <th>経過</th>
             <th>備考</th>
@@ -5291,6 +5292,30 @@
     });
   }
 
+  // 進捗の各段階（日付欄）が埋まっているかを、小さな丸印で一覧表示する
+  var PROCEDURE_STEPS = [
+    { key: 'receivedDate',  label: '受託' },
+    { key: 'submittedDate', label: '届出' },
+    { key: 'returnedDate',  label: '戻り' },
+    { key: 'srRequestDate', label: 'SR依' },
+    { key: 'srReturnDate',  label: 'SR戻' },
+    { key: 'sharufuDate',   label: '入力' },
+    { key: 'notifiedDate',  label: '通知' }
+  ];
+  function buildProcedureStepDots(p) {
+    return '<div style="display:flex;gap:3px;">' +
+      PROCEDURE_STEPS.map(function(s) {
+        var filled = !!p[s.key];
+        var color = filled ? '#43a047' : '#dcdcdc';
+        var title = s.label + '：' + (filled ? p[s.key] : '未記入');
+        return '<span title="' + esc(title) + '" style="display:flex;flex-direction:column;align-items:center;font-size:0.6rem;color:#9e9e9e;gap:1px;">' +
+          '<span style="width:11px;height:11px;border-radius:50%;background:' + color + ';display:inline-block;"></span>' +
+          s.label +
+          '</span>';
+      }).join('') +
+      '</div>';
+  }
+
   function renderProcedureList() {
     rebuildProcedureClientFilter();
     var tbody = document.getElementById('procedure-tbody');
@@ -5315,7 +5340,7 @@
     });
 
     if (rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#9e9e9e;padding:24px;">該当する手続きがありません</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#9e9e9e;padding:24px;">該当する手続きがありません</td></tr>';
       return;
     }
 
@@ -5333,6 +5358,7 @@
         '<td>' + esc(p.category || '—') + '</td>' +
         '<td>' + esc(p.procedureName || '—') + '</td>' +
         '<td>' + esc(asgn) + '</td>' +
+        '<td>' + buildProcedureStepDots(p) + '</td>' +
         '<td>' + stageBadge + '</td>' +
         '<td style="white-space:nowrap;">' + elapsedHtml + '</td>' +
         '<td style="max-width:180px;white-space:normal;font-size:0.8rem;color:#7a7a7a;">' + esc(p.memo || '') + '</td>' +
