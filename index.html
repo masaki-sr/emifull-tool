@@ -957,7 +957,7 @@
           <input id="new-task-text" type="text" class="form-input"
             placeholder="内容を入力…"
             style="display:none;width:150px;padding:8px 10px;font-size:0.82rem;flex-shrink:0;"
-            onkeydown="if(event.key==='Enter')addTask()" />
+            onkeydown="if(event.key==='Enter' && !event.isComposing && event.keyCode!==229)addTask()" />
           <select id="new-task-assignee" class="form-select"
             style="width:72px;padding:8px 4px;font-size:0.80rem;flex-shrink:0;">
             <option value="">担当者</option>
@@ -978,7 +978,7 @@
           <input id="new-task-memo" type="text" class="form-input"
             placeholder="メモ（任意）"
             style="width:150px;padding:8px 10px;font-size:0.80rem;flex-shrink:0;"
-            onkeydown="if(event.key==='Enter')addTask()" />
+            onkeydown="if(event.key==='Enter' && !event.isComposing && event.keyCode!==229)addTask()" />
           <button onclick="addTask()" class="btn btn-primary"
             style="padding:8px 12px;font-size:0.82rem;white-space:nowrap;flex-shrink:0;">追加</button>
         </div>
@@ -2985,7 +2985,7 @@
     '給与計算', '賞与計算', '給与修正・再計算', '会計入力',
     '入社手続', '退職手続', '雇用保険', '社会保険',
     '扶養・各種給付', '育休・産育手続', '年金事務所対応',
-    '労働保険', '労災対応', '算定基礎', '月変', '年度更新', '助成金',
+    '労働保険', '労災対応', '算定基礎', '月変', '年度更新', '助成金', '処遇改善',
     '求人・採用支援', '就業規則', '相談対応', '行政対応', 'セミナー研修', 'その他'
   ];
   // 記録カテゴリ（記録追加・編集フォームで使用、TASK_TYPESと共通）
