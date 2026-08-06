@@ -15,7 +15,7 @@
 
 import { google } from 'googleapis';
 
-export const config = { runtime: 'nodejs' };
+// 何も指定しない = 標準のNode.jsランタイムで動く（googleapisはこちらが必要）
 
 const SPREADSHEET_ID   = process.env.GOOGLE_SPREADSHEET_ID;
 const CLIENT_EMAIL     = process.env.GOOGLE_CLIENT_EMAIL;
