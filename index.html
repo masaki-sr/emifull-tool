@@ -5295,12 +5295,12 @@
   // 進捗の各段階（日付欄）が埋まっているかを、小さな丸印で一覧表示する
   var PROCEDURE_STEPS = [
     { key: 'receivedDate',  label: '受託' },
+    { key: 'sharufuDate',   label: '入力' },
     { key: 'submittedDate', label: '届出' },
     { key: 'returnedDate',  label: '戻り' },
+    { key: 'notifiedDate',  label: '通知' },
     { key: 'srRequestDate', label: 'SR依' },
-    { key: 'srReturnDate',  label: 'SR戻' },
-    { key: 'sharufuDate',   label: '入力' },
-    { key: 'notifiedDate',  label: '通知' }
+    { key: 'srReturnDate',  label: 'SR戻' }
   ];
   function buildProcedureStepDots(p) {
     return '<div style="display:flex;gap:3px;">' +
