@@ -89,15 +89,16 @@ async function handleAppendRow(sheets, sheetName, data) {
     return { error: `シート「${sheetName}」の見出し行が見つかりません` };
   }
 
-  // ID列があり、かつIDが指定されていなければ自動採番（既存の最大値+1）
-  const idCol = headers.indexOf('ID');
-  if (idCol !== -1 && !data['ID']) {
+  // ID列（"ID" または "◯◯_id" 形式）があり、かつIDが指定されていなければ自動採番（既存の最大値+1）
+  const idColName = headers.find(h => h === 'ID' || /_id$/i.test(h));
+  if (idColName && !data[idColName]) {
+    const idCol = headers.indexOf(idColName);
     let maxId = 0;
     for (let i = 1; i < rows.length; i++) {
       const v = parseInt(rows[i][idCol], 10);
       if (!isNaN(v) && v > maxId) maxId = v;
     }
-    data['ID'] = String(maxId + 1);
+    data[idColName] = String(maxId + 1);
   }
 
   const newRow = headers.map(h => (data[h] !== undefined ? data[h] : ''));
