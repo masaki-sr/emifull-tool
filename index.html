@@ -1036,12 +1036,12 @@
         <table>
           <thead>
             <tr>
-              <th>クライアント名</th>
-              <th>業種</th>
-              <th>従業員数</th>
-              <th>担当者</th>
-              <th>契約開始日</th>
-              <th>ステータス</th>
+              <th style="cursor:pointer;" onclick="setClientSort('name')">クライアント名<span id="client-sort-arrow-name"></span></th>
+              <th style="cursor:pointer;" onclick="setClientSort('industry')">業種<span id="client-sort-arrow-industry"></span></th>
+              <th style="cursor:pointer;" onclick="setClientSort('employees')">従業員数<span id="client-sort-arrow-employees"></span></th>
+              <th style="cursor:pointer;" onclick="setClientSort('manager')">担当者<span id="client-sort-arrow-manager"></span></th>
+              <th style="cursor:pointer;" onclick="setClientSort('contractStart')">契約開始日<span id="client-sort-arrow-contractStart"></span></th>
+              <th style="cursor:pointer;" onclick="setClientSort('status')">ステータス<span id="client-sort-arrow-status"></span></th>
               <th></th>
             </tr>
           </thead>
@@ -4739,6 +4739,18 @@
   }
   var clientTabFilter    = 'all';
   var clientSearchQuery  = '';
+  var clientSortKey = 'name';
+  var clientSortDir = 'asc'; // 'asc' または 'desc'
+
+  function setClientSort(key) {
+    if (clientSortKey === key) {
+      clientSortDir = (clientSortDir === 'asc') ? 'desc' : 'asc';
+    } else {
+      clientSortKey = key;
+      clientSortDir = 'asc';
+    }
+    renderClients();
+  }
 
   // ステータス定義（将来追加しやすいよう分離）
   var CLIENT_STATUS = {
@@ -4845,6 +4857,28 @@
     var tbody = document.getElementById('client-tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
+
+    // 見出しクリックによる並び替え
+    filtered = filtered.slice().sort(function(a, b) {
+      var av = a[clientSortKey], bv = b[clientSortKey];
+      if (clientSortKey === 'employees') {
+        av = parseInt(av, 10) || 0; bv = parseInt(bv, 10) || 0;
+      } else if (clientSortKey === 'status') {
+        av = (CLIENT_STATUS[a.status] || {}).label || a.status || '';
+        bv = (CLIENT_STATUS[b.status] || {}).label || b.status || '';
+      } else {
+        av = String(av || ''); bv = String(bv || '');
+      }
+      var cmp = (av < bv) ? -1 : (av > bv) ? 1 : 0;
+      return clientSortDir === 'asc' ? cmp : -cmp;
+    });
+
+    // 見出しの矢印表示を更新
+    ['name', 'industry', 'employees', 'manager', 'contractStart', 'status'].forEach(function(key) {
+      var el = document.getElementById('client-sort-arrow-' + key);
+      if (!el) return;
+      el.textContent = (key === clientSortKey) ? (clientSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+    });
 
     if (filtered.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#9e9e9e;padding:24px;">該当するクライアントはありません</td></tr>';
