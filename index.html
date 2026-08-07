@@ -4806,8 +4806,27 @@
   }
 
   // 「契約中」クライアントのみでプルダウンを再構築（複数セレクト対応）
+  // クライアント一覧の並び替え設定（clientSortKey/clientSortDir）を、他画面のクライアント選択欄にも適用する
+  function getSortedClients(list) {
+    list = (list || loadClients()).slice();
+    list.sort(function(a, b) {
+      var av = a[clientSortKey], bv = b[clientSortKey];
+      if (clientSortKey === 'employees') {
+        av = parseInt(av, 10) || 0; bv = parseInt(bv, 10) || 0;
+      } else if (clientSortKey === 'status') {
+        av = (CLIENT_STATUS[a.status] || {}).label || a.status || '';
+        bv = (CLIENT_STATUS[b.status] || {}).label || b.status || '';
+      } else {
+        av = String(av || ''); bv = String(bv || '');
+      }
+      var cmp = (av < bv) ? -1 : (av > bv) ? 1 : 0;
+      return clientSortDir === 'asc' ? cmp : -cmp;
+    });
+    return list;
+  }
+
   function rebuildTaskClientSelect() {
-    var clients = loadClients().filter(function(c) { return c.status === 'active' || c.status === 'spot' || c.status === 'prospect'; });
+    var clients = getSortedClients(loadClients().filter(function(c) { return c.status === 'active' || c.status === 'spot' || c.status === 'prospect'; }));
     ['new-task-client', 'record-client', 'consult-client', 'inquiry-client'].forEach(function(selId) {
       var sel = document.getElementById(selId);
       if (!sel) return;
@@ -5552,7 +5571,7 @@
       // 記録追加等と違い、見込み・契約中どちらのクライアントも選べるようにする
       var cur = clientSel.value;
       clientSel.innerHTML = '<option value="">クライアントを選択してください</option>';
-      loadClients().forEach(function(c) {
+      getSortedClients().forEach(function(c) {
         var opt = document.createElement('option');
         opt.value = c.name; opt.textContent = c.name;
         if (c.name === cur) opt.selected = true;
@@ -6966,7 +6985,7 @@
       monthEl.value = thisMonthJST();
     }
     // 顧問先プルダウンを最新クライアントで再構築
-    var clients = loadClients().filter(function(c) { return c.status === 'active' || c.status === 'spot'; });
+    var clients = getSortedClients(loadClients().filter(function(c) { return c.status === 'active' || c.status === 'spot'; }));
     var tsClient = document.getElementById('ts-client');
     if (tsClient) {
       var cur = tsClient.value;
